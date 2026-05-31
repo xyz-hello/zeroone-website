@@ -1,5 +1,6 @@
 import alKhalidPalahuddinImage from '../assets/team/Khalid.jpg';
 import alrizaPalahuddinImage from '../assets/team/riza.jpeg';
+import hassanImage from '../assets/team/Hassan.png';
 import paulJohnPeligroImage from '../assets/team/pj.png';
 
 export const companyProfile = {
@@ -216,6 +217,20 @@ export const companyProfile = {
           name: 'AL',
           role: 'Business Development Officer (BDO)\nMid-Level Software Developer',
           image: alKhalidPalahuddinImage
+        }
+      ]
+    },
+    {
+      id: 'business-partner',
+      type: 'team',
+      title: 'Strategic Partners',
+      intro:
+        'Working alongside ZeroOne IT Inc. to strengthen client relationships, expand business opportunities, and support regional growth.',
+      members: [
+        {
+          name: 'Hassan',
+          role: 'Client Relations & Business Development Partner',
+          image: hassanImage
         }
       ]
     }

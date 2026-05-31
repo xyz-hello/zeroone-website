@@ -1446,6 +1446,10 @@ h2 {
   gap: clamp(1.2rem, 2.6vw, 1.8rem);
 }
 
+.team-showcase-solo {
+  grid-template-columns: minmax(280px, 360px);
+}
+
 .team-card {
   min-width: 0;
   display: grid;

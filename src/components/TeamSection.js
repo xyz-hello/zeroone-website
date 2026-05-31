@@ -2,9 +2,15 @@ import SectionHeading from './SectionHeading';
 
 function TeamSection({ id, title, intro, members }) {
   const teamOrder = ['Riza', 'PJ', 'AL'];
+  const isSoloSection = members.length === 1;
+
   const getCardVariant = (member) => {
     if (member.name === 'PJ') {
       return 'featured';
+    }
+
+    if (member.role.includes('Partner')) {
+      return 'executive';
     }
 
     if (member.role.includes('Business Development')) {
@@ -16,6 +22,10 @@ function TeamSection({ id, title, intro, members }) {
   const getRoleLabel = (member) => {
     if (member.name === 'PJ') {
       return 'Leadership & Technical Consulting';
+    }
+
+    if (member.role.includes('Partner')) {
+      return 'Client Relations & Partnerships';
     }
 
     if (member.role.includes('Business Development')) {
@@ -37,7 +47,7 @@ function TeamSection({ id, title, intro, members }) {
       <div className="team-section-header">
         <SectionHeading title={title || 'Meet Our Team'} intro={intro} />
       </div>
-      <div className="team-showcase">
+      <div className={`team-showcase${isSoloSection ? ' team-showcase-solo' : ''}`}>
         {orderedMembers.map((member, index) => (
           <article
             key={member.name}
