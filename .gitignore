@@ -34,6 +34,11 @@ dist-ssr
 
 # production
 /build
+apps/*/build
+
+# environment
+.env
+apps/*/.env
 
 # misc
 .DS_Store

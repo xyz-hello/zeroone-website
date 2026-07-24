@@ -1,11 +1,11 @@
 function Header({ brand, navigation, contactHref }) {
   return (
     <header className="topbar">
-      <div className="brand">
+      <a className="brand" href="/" aria-label="ZeroOne home">
         <div className="brand-copy">
           <strong>{brand.name}</strong>
         </div>
-      </div>
+      </a>
 
       <nav className="nav" aria-label="Primary">
         {navigation.map((item) => (

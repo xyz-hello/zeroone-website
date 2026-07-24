@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import './App.css';
-import logo from './assets/company/canva.png';
-import secLogo from './assets/company/sec.jpg';
-import birLogo from './assets/company/BIR.png';
-import Header from './components/Header';
-import HeroSection from './components/HeroSection';
-import CardSection from './components/CardSection';
-import TeamSection from './components/TeamSection';
-import TextSection from './components/TextSection';
-import ImpactStatement from './components/ImpactStatement';
-import { companyProfile } from './content/companyProfile';
+import logo from '../assets/company/canva.png';
+import secLogo from '../assets/company/sec.jpg';
+import birLogo from '../assets/company/BIR.png';
+import ChatWidget from '../components/ChatWidget';
+import Header from '../components/Header';
+import HeroSection from '../components/HeroSection';
+import CardSection from '../components/CardSection';
+import TeamSection from '../components/TeamSection';
+import TextSection from '../components/TextSection';
+import ImpactStatement from '../components/ImpactStatement';
+import { companyProfile } from '../content/companyProfile';
+
+const aboutRoute = '/about-us';
+
+function getAboutAnchor() {
+  return window.location.hash.replace('#', '');
+}
 
 const sectionRenderers = {
   text: (section) => (
@@ -59,10 +65,10 @@ function App() {
   const solutionProcessRef = useRef(null);
   const solutionCardsInViewRef = useRef(false);
   const footerLinks = [
-    { label: 'Services', href: '#services' },
-    { label: 'Solutions', href: '#services' },
-    { label: 'About', href: '#about-us' },
-    { label: 'Contact', href: `mailto:${companyProfile.contact.email}` }
+    { label: 'Services', href: `${aboutRoute}#services` },
+    { label: 'Solutions', href: `${aboutRoute}#services` },
+    { label: 'About', href: `${aboutRoute}#about-us` },
+    { label: 'Contact', href: `${aboutRoute}#${companyProfile.contact.id}` }
   ];
   const socialLinks = [
     { label: 'Facebook', href: 'https://www.facebook.com/zeroone.it.inc' },
@@ -72,13 +78,13 @@ function App() {
 
   useEffect(() => {
     const scrollToHashTarget = () => {
-      const { hash } = window.location;
+      const anchor = getAboutAnchor();
 
-      if (!hash) {
+      if (!anchor) {
         return;
       }
 
-      const target = document.querySelector(hash);
+      const target = document.getElementById(anchor);
 
       if (!target) {
         return;
@@ -153,7 +159,7 @@ function App() {
     .map(({ id, title }) => ({
       id,
       label: title,
-      href: id === 'about' ? '#about-us' : `#${id}`
+      href: id === 'about' ? `${aboutRoute}#about-us` : `${aboutRoute}#${id}`
     }));
   const navigation = baseNavigation;
 
@@ -298,7 +304,7 @@ function App() {
       <Header
         brand={companyProfile.brand}
         navigation={navigation}
-        contactHref={`#${companyProfile.contact.id}`}
+        contactHref={`${aboutRoute}#${companyProfile.contact.id}`}
       />
 
       <main>
@@ -395,8 +401,10 @@ function App() {
           <path d="M12 5l-7 7 1.4 1.4 4.6-4.6V19h2V8.8l4.6 4.6L19 12z" />
         </svg>
       </button>
+      <ChatWidget />
     </div>
   );
 }
 
 export default App;
+

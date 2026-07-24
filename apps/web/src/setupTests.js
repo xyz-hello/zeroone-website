@@ -11,3 +11,5 @@ class MockIntersectionObserver {
 }
 
 global.IntersectionObserver = MockIntersectionObserver;
+
+window.scrollTo = jest.fn();

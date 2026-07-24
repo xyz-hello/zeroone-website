@@ -1,70 +1,60 @@
-# Getting Started with Create React App
+# ZeroOne Monorepo
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This repository contains the ZeroOne frontend and backend apps in one npm-workspaces monorepo.
 
-## Available Scripts
+## Structure
 
-In the project directory, you can run:
+```text
+apps/
+  web/  React website and landing page
+  api/  Node.js REST API with Express, Sequelize, and MySQL
+```
 
-### `npm start`
+## Commands
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Install all workspace dependencies from the repository root:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+npm install
+```
 
-### `npm test`
+Run the website:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+npm run dev:web
+```
 
-### `npm run build`
+Build the website:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+npm run build:web
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Test the website:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+npm run test:web
+```
 
-### `npm run eject`
+Run the API:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+cp apps/api/.env.example apps/api/.env
+npm run dev:api
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+The API expects a MySQL database configured through `apps/api/.env`.
+The website contact form posts to the API at `REACT_APP_API_URL`, which defaults to `http://localhost:4000` in development.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Create the auth users table and first superadmin:
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```bash
+npm run db:migrate -w apps/api
+npm run db:seed:superadmin -w apps/api
+```
 
-## Learn More
+User roles are numeric: `0` is superadmin and `1` is admin.
+For local development, `SYNC_DB_ON_START=true` and `SEED_SUPERADMIN_ON_START=true` let `npm start` create/update tables and seed the superadmin automatically.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+The website uses clean client-side URLs such as `/about-us` and `/admin/login`.
+Your frontend host must rewrite unknown routes to `index.html` so page refreshes work.

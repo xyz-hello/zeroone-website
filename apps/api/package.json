@@ -1,0 +1,29 @@
+{
+  "name": "zeroone-api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "db:check": "node src/scripts/check-db.js",
+    "db:migrate": "node src/scripts/migrate.js",
+    "db:seed:admin": "node src/scripts/seed-admin.js",
+    "db:seed:superadmin": "node src/scripts/seed-superadmin.js",
+    "db:seed:chat": "node src/scripts/seed-chat-knowledge.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
+    "mysql2": "^3.11.5",
+    "sequelize": "^6.37.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
