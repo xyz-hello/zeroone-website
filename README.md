@@ -83,6 +83,8 @@ The repository includes a Docker Compose production setup with:
 - `api`: Node.js Express API
 - `mysql`: MySQL 8.4 with a persistent Docker volume
 
+By default, the `web` service binds to `127.0.0.1:3100` so this stack can run beside other live apps on the same VPS without taking public port `80`.
+
 On the VPS, point these DNS records to the server public IP:
 
 ```text
@@ -121,16 +123,16 @@ docker compose logs -f api
 The website will be served on:
 
 ```text
-http://zerooneitinc.com
+http://127.0.0.1:3100
 ```
 
 The browser calls the API through the same domain:
 
 ```text
-http://zerooneitinc.com/api
+http://127.0.0.1:3100/api
 ```
 
-For HTTPS, either enable a CDN/proxy such as Cloudflare in front of the VPS or add a certificate manager/reverse proxy on the server. The included Nginx config is domain-ready for `zerooneitinc.com` and `www.zerooneitinc.com` on port `80`.
+For public traffic, add an external Nginx reverse proxy on the VPS that routes `zerooneitinc.com` and `www.zerooneitinc.com` to `http://127.0.0.1:3100`. For HTTPS, either enable a CDN/proxy such as Cloudflare in front of the VPS or add a certificate manager/reverse proxy on the server.
 
 ## GitHub CI/CD
 
