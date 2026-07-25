@@ -54,11 +54,13 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/zeroone_vps
           chmod 600 ~/.ssh/zeroone_vps
-          ssh-keyscan -p "${VPS_PORT:-22}" "$VPS_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 20 -p "${VPS_PORT:-22}" "$VPS_HOST" >> ~/.ssh/known_hosts || true
 
       - name: Package release
         run: |
@@ -81,9 +83,9 @@ jobs:
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
           APP_DIR="${VPS_APP_DIR:-/opt/zeroone-website}"
-          ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "mkdir -p '$APP_DIR'"
-          scp -i ~/.ssh/zeroone_vps -P "${VPS_PORT:-22}" "$RUNNER_TEMP/zeroone-release.tar.gz" "$VPS_USER@$VPS_HOST:/tmp/zeroone-release.tar.gz"
-          ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "tar -xzf /tmp/zeroone-release.tar.gz -C '$APP_DIR' && rm /tmp/zeroone-release.tar.gz"
+          ssh -i ~/.ssh/zeroone_vps -o StrictHostKeyChecking=accept-new -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "mkdir -p '$APP_DIR'"
+          scp -i ~/.ssh/zeroone_vps -o StrictHostKeyChecking=accept-new -P "${VPS_PORT:-22}" "$RUNNER_TEMP/zeroone-release.tar.gz" "$VPS_USER@$VPS_HOST:/tmp/zeroone-release.tar.gz"
+          ssh -i ~/.ssh/zeroone_vps -o StrictHostKeyChecking=accept-new -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "tar -xzf /tmp/zeroone-release.tar.gz -C '$APP_DIR' && rm /tmp/zeroone-release.tar.gz"
 
       - name: Start Docker stack
         env:
@@ -93,4 +95,4 @@ jobs:
           VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
         run: |
           APP_DIR="${VPS_APP_DIR:-/opt/zeroone-website}"
-          ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "APP_DIR='$APP_DIR' sh '$APP_DIR/scripts/deploy-vps.sh'"
+          ssh -i ~/.ssh/zeroone_vps -o StrictHostKeyChecking=accept-new -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "APP_DIR='$APP_DIR' sh '$APP_DIR/scripts/deploy-vps.sh'"
