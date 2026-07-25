@@ -12,5 +12,4 @@ fi
 
 docker compose --env-file .env config >/dev/null
 docker compose --env-file .env up -d --build --remove-orphans
-docker image prune -f
 docker compose --env-file .env ps

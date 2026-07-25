@@ -73,7 +73,7 @@ services:
       api:
         condition: service_started
     ports:
-      - "80:80"
+      - "${ZEROONE_WEB_BIND:-127.0.0.1}:${ZEROONE_WEB_PORT:-3100}:80"
 
 volumes:
   zeroone_mysql_data:
