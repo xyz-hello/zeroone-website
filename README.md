@@ -137,7 +137,7 @@ For HTTPS, either enable a CDN/proxy such as Cloudflare in front of the VPS or a
 Two GitHub Actions workflows are included:
 
 - `.github/workflows/ci.yml`: runs on pull requests and pushes to `main` or `develop`
-- `.github/workflows/deploy.yml`: deploys to the VPS on pushes to `main` and can also be run manually
+- `.github/workflows/deploy.yml`: deploys to the VPS on pushes to `develop` and can also be run manually
 
 CI checks:
 
