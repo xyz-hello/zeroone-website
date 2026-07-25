@@ -5,6 +5,7 @@ import secLogo from "../assets/landing/sec.jpg";
 import zeroOneLogo from "../assets/landing/zeroone-logo.png";
 import ChatWidget from "../components/ChatWidget";
 import Header from "../components/Header";
+import Seo, { defaultSiteUrl, toAbsoluteUrl } from "../components/Seo";
 
 const companyProfileAboutUrl = "/about-us";
 const companyProfileServicesUrl = "/about-us#services";
@@ -19,6 +20,82 @@ const landingNavigation = [
   { id: "home", label: "Home", href: "/" },
   { id: "contact", label: "Contact Us", href: "/#contact" },
   { id: "about", label: "About Us", href: "/about-us" },
+];
+const homeTitle = "ZeroOne IT Inc. | Custom Software, Web Platforms and AI Automation";
+const homeDescription =
+  "ZeroOne IT Inc. builds custom software, modern websites, web platforms, mobile apps, internal systems, and AI automation for growing businesses in the Philippines.";
+const homeStructuredData = [
+  {
+    "@type": "Organization",
+    "@id": `${defaultSiteUrl}/#organization`,
+    name: "ZeroOne IT Inc.",
+    legalName: "ZeroOne Information Technology Inc.",
+    url: defaultSiteUrl,
+    logo: toAbsoluteUrl("/android-chrome-512x512.png"),
+    foundingDate: "2026-05",
+    email: "info@zerooneitinc.com",
+    telephone: "+63 919 079 7137",
+    areaServed: ["Philippines", "Worldwide"],
+    sameAs: [
+      "https://www.facebook.com/zeroone.it.inc",
+      "https://www.instagram.com/zerooneit.inc/",
+      "https://www.linkedin.com/company/112718341/"
+    ],
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "sales",
+        email: "info@zerooneitinc.com",
+        telephone: "+63 919 079 7137",
+        areaServed: "PH",
+        availableLanguage: ["English", "Filipino"]
+      }
+    ]
+  },
+  {
+    "@type": "WebSite",
+    "@id": `${defaultSiteUrl}/#website`,
+    name: "ZeroOne IT Inc.",
+    url: defaultSiteUrl,
+    publisher: {
+      "@id": `${defaultSiteUrl}/#organization`
+    }
+  },
+  {
+    "@type": "ProfessionalService",
+    "@id": `${defaultSiteUrl}/#professional-service`,
+    name: "ZeroOne IT Inc.",
+    url: defaultSiteUrl,
+    image: toAbsoluteUrl("/android-chrome-512x512.png"),
+    email: "info@zerooneitinc.com",
+    telephone: "+63 919 079 7137",
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "PH"
+    },
+    areaServed: {
+      "@type": "Country",
+      name: "Philippines"
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Software development services",
+      itemListElement: [
+        "Custom software development",
+        "AI automation",
+        "Internal systems",
+        "Web platforms",
+        "Mobile apps",
+        "Business workflow solutions"
+      ].map((name) => ({
+        "@type": "Offer",
+        itemOffered: {
+          "@type": "Service",
+          name
+        }
+      }))
+    }
+  }
 ];
 
 const binaryPatterns = [
@@ -316,6 +393,12 @@ export default function App() {
 
   return (
     <div className="landing-page-shell">
+      <Seo
+        title={homeTitle}
+        description={homeDescription}
+        canonicalPath="/"
+        structuredData={homeStructuredData}
+      />
       <Header
         brand={landingBrand}
         className="landing-topbar"

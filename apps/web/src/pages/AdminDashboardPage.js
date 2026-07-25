@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import Seo from '../components/Seo';
 import Toast from '../components/Toast';
 
 const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
@@ -198,6 +199,12 @@ function AdminDashboardPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
+      <Seo
+        title="Mail Configuration | ZeroOne IT Inc. Admin"
+        description="Private ZeroOne IT Inc. administrator mail configuration."
+        canonicalPath="/admin/mail-config"
+        noindex
+      />
       <div className="grid min-h-screen lg:grid-cols-[16.5rem_1fr]">
         <aside className="flex min-h-screen flex-col border-r border-slate-900/10 bg-[#07152b] px-5 py-5 text-white lg:sticky lg:top-0 lg:h-screen">
           <a className="flex items-center gap-4" href="/">

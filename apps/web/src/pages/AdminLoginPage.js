@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Seo from '../components/Seo';
 
 const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
@@ -61,6 +62,12 @@ function AdminLoginPage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#050816] text-white">
+      <Seo
+        title="Admin Login | ZeroOne IT Inc."
+        description="Private ZeroOne IT Inc. administrator login."
+        canonicalPath="/admin/login"
+        noindex
+      />
       <section className="relative mx-auto grid min-h-screen w-full max-w-7xl items-center gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-10">
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute left-[-12rem] top-[-10rem] h-96 w-96 rounded-full bg-blue-500/20 blur-3xl" />

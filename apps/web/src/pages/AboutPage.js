@@ -6,12 +6,65 @@ import ChatWidget from '../components/ChatWidget';
 import Header from '../components/Header';
 import HeroSection from '../components/HeroSection';
 import CardSection from '../components/CardSection';
+import Seo, { defaultSiteUrl, toAbsoluteUrl } from '../components/Seo';
 import TeamSection from '../components/TeamSection';
 import TextSection from '../components/TextSection';
 import ImpactStatement from '../components/ImpactStatement';
 import { companyProfile } from '../content/companyProfile';
 
 const aboutRoute = '/about-us';
+const aboutTitle = 'About ZeroOne IT Inc. | Software Development Team in the Philippines';
+const aboutDescription =
+  'Learn about ZeroOne IT Inc., a Philippine software development company building reliable web, mobile, internal business systems, and AI-powered solutions.';
+const aboutStructuredData = [
+  {
+    '@type': 'AboutPage',
+    '@id': `${defaultSiteUrl}/about-us#about-page`,
+    name: 'About ZeroOne IT Inc.',
+    url: `${defaultSiteUrl}/about-us`,
+    description: aboutDescription,
+    isPartOf: {
+      '@id': `${defaultSiteUrl}/#website`
+    },
+    about: {
+      '@id': `${defaultSiteUrl}/#organization`
+    }
+  },
+  {
+    '@type': 'Organization',
+    '@id': `${defaultSiteUrl}/#organization`,
+    name: 'ZeroOne IT Inc.',
+    legalName: 'ZeroOne Information Technology Inc.',
+    url: defaultSiteUrl,
+    logo: toAbsoluteUrl('/android-chrome-512x512.png'),
+    foundingDate: '2026-05',
+    email: 'info@zerooneitinc.com',
+    telephone: '+63 919 079 7137',
+    areaServed: ['Philippines', 'Worldwide'],
+    sameAs: [
+      'https://www.facebook.com/zeroone.it.inc',
+      'https://www.instagram.com/zerooneit.inc/',
+      'https://www.linkedin.com/company/112718341/'
+    ]
+  },
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: defaultSiteUrl
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'About Us',
+        item: `${defaultSiteUrl}/about-us`
+      }
+    ]
+  }
+];
 
 function getAboutAnchor() {
   return window.location.hash.replace('#', '');
@@ -308,6 +361,12 @@ function App() {
 
   return (
     <div className="site">
+      <Seo
+        title={aboutTitle}
+        description={aboutDescription}
+        canonicalPath="/about-us"
+        structuredData={aboutStructuredData}
+      />
       <Header
         brand={companyProfile.brand}
         navigation={navigation}
