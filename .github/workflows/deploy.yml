@@ -1,0 +1,96 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test web
+        run: npm run test:web
+
+      - name: Build web
+        run: npm run build:web
+        env:
+          REACT_APP_API_URL: /api
+          REACT_APP_SITE_URL: https://zerooneitinc.com
+          REACT_APP_CHAT_STORAGE_TTL_HOURS: 24
+
+      - name: Check API syntax
+        run: |
+          node --check apps/api/src/server.js
+          node --check apps/api/src/app.js
+          node --check apps/api/src/config/database.js
+
+      - name: Validate Docker Compose
+        run: docker compose --env-file .env.docker.example config
+
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/zeroone_vps
+          chmod 600 ~/.ssh/zeroone_vps
+          ssh-keyscan -p "${VPS_PORT:-22}" "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Package release
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='apps/*/node_modules' \
+            --exclude='apps/*/build' \
+            --exclude='build' \
+            --exclude='.env' \
+            --exclude='apps/*/.env' \
+            -czf zeroone-release.tar.gz .
+
+      - name: Upload release
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          APP_DIR="${VPS_APP_DIR:-/opt/zeroone-website}"
+          ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "mkdir -p '$APP_DIR'"
+          scp -i ~/.ssh/zeroone_vps -P "${VPS_PORT:-22}" zeroone-release.tar.gz "$VPS_USER@$VPS_HOST:/tmp/zeroone-release.tar.gz"
+          ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "tar -xzf /tmp/zeroone-release.tar.gz -C '$APP_DIR' && rm /tmp/zeroone-release.tar.gz"
+
+      - name: Start Docker stack
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_APP_DIR: ${{ secrets.VPS_APP_DIR }}
+        run: |
+          APP_DIR="${VPS_APP_DIR:-/opt/zeroone-website}"
+          ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "APP_DIR='$APP_DIR' sh '$APP_DIR/scripts/deploy-vps.sh'"

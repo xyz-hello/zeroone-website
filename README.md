@@ -131,3 +131,52 @@ http://zerooneitinc.com/api
 ```
 
 For HTTPS, either enable a CDN/proxy such as Cloudflare in front of the VPS or add a certificate manager/reverse proxy on the server. The included Nginx config is domain-ready for `zerooneitinc.com` and `www.zerooneitinc.com` on port `80`.
+
+## GitHub CI/CD
+
+Two GitHub Actions workflows are included:
+
+- `.github/workflows/ci.yml`: runs on pull requests and pushes to `main` or `develop`
+- `.github/workflows/deploy.yml`: deploys to the VPS on pushes to `main` and can also be run manually
+
+CI checks:
+
+```text
+npm ci
+npm run test:web
+npm run build:web
+node --check for API entry files
+docker compose config validation
+```
+
+Before the first deployment, prepare the VPS:
+
+```bash
+sudo mkdir -p /opt/zeroone-website
+sudo chown -R "$USER":"$USER" /opt/zeroone-website
+cd /opt/zeroone-website
+```
+
+Create the production env file on the VPS:
+
+```bash
+nano .env
+```
+
+Use `.env.docker.example` as the template and fill the real production secrets. The GitHub deployment intentionally does not upload `.env`, so production secrets stay only on the server.
+
+Add these GitHub repository secrets in **Settings > Secrets and variables > Actions**:
+
+```text
+VPS_HOST      your VPS IP address or zerooneitinc.com
+VPS_USER      SSH username, for example ubuntu or root
+VPS_PORT      SSH port, usually 22
+VPS_SSH_KEY   private SSH key that can connect to the VPS
+VPS_APP_DIR   /opt/zeroone-website
+```
+
+The deploy workflow packages the checked-out commit, uploads it to `VPS_APP_DIR`, preserves the server `.env`, and runs:
+
+```bash
+docker compose --env-file .env up -d --build --remove-orphans
+```
