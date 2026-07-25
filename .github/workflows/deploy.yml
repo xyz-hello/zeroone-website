@@ -71,7 +71,7 @@ jobs:
             --exclude='build' \
             --exclude='.env' \
             --exclude='apps/*/.env' \
-            -czf zeroone-release.tar.gz .
+            -czf "$RUNNER_TEMP/zeroone-release.tar.gz" .
 
       - name: Upload release
         env:
@@ -82,7 +82,7 @@ jobs:
         run: |
           APP_DIR="${VPS_APP_DIR:-/opt/zeroone-website}"
           ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "mkdir -p '$APP_DIR'"
-          scp -i ~/.ssh/zeroone_vps -P "${VPS_PORT:-22}" zeroone-release.tar.gz "$VPS_USER@$VPS_HOST:/tmp/zeroone-release.tar.gz"
+          scp -i ~/.ssh/zeroone_vps -P "${VPS_PORT:-22}" "$RUNNER_TEMP/zeroone-release.tar.gz" "$VPS_USER@$VPS_HOST:/tmp/zeroone-release.tar.gz"
           ssh -i ~/.ssh/zeroone_vps -p "${VPS_PORT:-22}" "$VPS_USER@$VPS_HOST" "tar -xzf /tmp/zeroone-release.tar.gz -C '$APP_DIR' && rm /tmp/zeroone-release.tar.gz"
 
       - name: Start Docker stack
