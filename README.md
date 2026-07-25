@@ -74,3 +74,60 @@ For local development, `SYNC_DB_ON_START=true` and `SEED_SUPERADMIN_ON_START=tru
 
 The website uses clean client-side URLs such as `/about-us` and `/admin/login`.
 Your frontend host must rewrite unknown routes to `index.html` so page refreshes work.
+
+## Docker VPS Deployment
+
+The repository includes a Docker Compose production setup with:
+
+- `web`: Nginx serving the built React app and proxying `/api` to the API service
+- `api`: Node.js Express API
+- `mysql`: MySQL 8.4 with a persistent Docker volume
+
+On the VPS, point these DNS records to the server public IP:
+
+```text
+zerooneitinc.com      A      your-vps-ip
+www.zerooneitinc.com  A      your-vps-ip
+```
+
+Create the production environment file from the sample:
+
+```bash
+cp .env.docker.example .env
+```
+
+Edit `.env` and replace every password/secret value. Use strong values for:
+
+```bash
+MYSQL_ROOT_PASSWORD=
+MYSQL_PASSWORD=
+JWT_SECRET=
+ADMIN_PASSWORD=
+```
+
+Build and start the stack:
+
+```bash
+docker compose up -d --build
+```
+
+Check the running containers:
+
+```bash
+docker compose ps
+docker compose logs -f api
+```
+
+The website will be served on:
+
+```text
+http://zerooneitinc.com
+```
+
+The browser calls the API through the same domain:
+
+```text
+http://zerooneitinc.com/api
+```
+
+For HTTPS, either enable a CDN/proxy such as Cloudflare in front of the VPS or add a certificate manager/reverse proxy on the server. The included Nginx config is domain-ready for `zerooneitinc.com` and `www.zerooneitinc.com` on port `80`.
