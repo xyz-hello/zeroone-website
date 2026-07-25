@@ -161,7 +161,14 @@ function App() {
       label: title,
       href: id === 'about' ? `${aboutRoute}#about-us` : `${aboutRoute}#${id}`
     }));
-  const navigation = baseNavigation;
+  const navigation = [
+    {
+      id: 'home',
+      label: 'Home',
+      href: '/'
+    },
+    ...baseNavigation
+  ];
 
   const renderSections = () => {
     const sections = [];

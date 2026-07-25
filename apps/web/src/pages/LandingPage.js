@@ -1,14 +1,25 @@
-import { useState } from "react";
+import { memo, useEffect, useState } from "react";
 import logo2 from "../assets/landing/logo2.png";
 import birLogo from "../assets/landing/BIR.png";
 import secLogo from "../assets/landing/sec.jpg";
 import zeroOneLogo from "../assets/landing/zeroone-logo.png";
 import ChatWidget from "../components/ChatWidget";
+import Header from "../components/Header";
 
 const companyProfileAboutUrl = "/about-us";
 const companyProfileServicesUrl = "/about-us#services";
 const companyProfileHomeUrl = "/";
 const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+const contactCooldownStorageKey = "zerooneContactCooldownUntil";
+const contactCooldownMs = 5 * 60 * 1000;
+const landingBrand = {
+  name: "ZeroOne IT Inc.",
+};
+const landingNavigation = [
+  { id: "home", label: "Home", href: "/" },
+  { id: "contact", label: "Contact Us", href: "/#contact" },
+  { id: "about", label: "About Us", href: "/about-us" },
+];
 
 const binaryPatterns = [
   "0101011010010110",
@@ -99,8 +110,8 @@ const registrationBadges = [
 const contactMethods = [
   {
     title: "Email us",
-    value: "contact@zeroone-apps.com",
-    href: "mailto:contact@zeroone-apps.com",
+    value: "info@zerooneitinc.com",
+    href: "mailto:info@zerooneitinc.com",
     icon: (
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" />
@@ -133,16 +144,99 @@ const contactMethods = [
   },
 ];
 
+const BinaryRain = memo(function BinaryRain() {
+  return (
+    <div className="landing-binary-rain" aria-hidden="true">
+      {binaryColumns.map((column, index) => (
+        <div
+          className="landing-binary-column"
+          key={`${column.pattern}-${index}`}
+          style={{
+            "--column-duration": `${column.duration}s`,
+            "--column-delay": `-${column.delay}s`,
+          }}
+        >
+          {column.segments.map((segment, segmentIndex) => (
+            <span
+              className={segment.active ? "landing-binary-segment landing-is-active" : "landing-binary-segment"}
+              key={`${index}-${segmentIndex}`}
+              style={{ marginBottom: `${segment.gap}px` }}
+            >
+              {segment.text}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+});
+
 export default function App() {
+  const [cooldownRemainingMs, setCooldownRemainingMs] = useState(0);
   const [formState, setFormState] = useState({
     name: "",
     email: "",
     message: "",
   });
+  const isContactCoolingDown = cooldownRemainingMs > 0;
+  const cooldownTotalSeconds = Math.ceil(cooldownRemainingMs / 1000);
+  const cooldownMinutes = Math.floor(cooldownTotalSeconds / 60);
+  const cooldownSeconds = cooldownTotalSeconds % 60;
+  const cooldownLabel = `${cooldownMinutes}:${String(cooldownSeconds).padStart(2, "0")}`;
+
+  useEffect(() => {
+    function syncCooldown() {
+      const cooldownUntil = Number(window.localStorage.getItem(contactCooldownStorageKey) || 0);
+      const nextRemainingMs = Math.max(0, cooldownUntil - Date.now());
+
+      setCooldownRemainingMs(nextRemainingMs);
+
+      if (nextRemainingMs === 0 && cooldownUntil) {
+        window.localStorage.removeItem(contactCooldownStorageKey);
+        setSubmitState((current) =>
+          current.status === "error" && current.message.includes("Please wait 5 minutes")
+            ? {
+                status: "idle",
+                message: "",
+              }
+            : current,
+        );
+      }
+    }
+
+    syncCooldown();
+    const intervalId = window.setInterval(syncCooldown, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
   const [submitState, setSubmitState] = useState({
     status: "idle",
     message: "",
   });
+
+  function scrollToContact(event) {
+    event.preventDefault();
+
+    const contactSection = document.getElementById("contact");
+    if (!contactSection) {
+      return;
+    }
+
+    const topbar = document.querySelector(".landing-topbar");
+    const topbarHeight = topbar?.getBoundingClientRect().height || 72;
+    const scrollTop = Math.max(
+      0,
+      contactSection.getBoundingClientRect().top + window.scrollY - topbarHeight - 12,
+    );
+
+    window.history.pushState(null, "", "/#contact");
+    window.scrollTo({
+      top: scrollTop,
+      behavior: "smooth",
+    });
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -155,6 +249,15 @@ export default function App() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (isContactCoolingDown) {
+      setSubmitState({
+        status: "error",
+        message: `Please wait ${cooldownLabel} before sending another message.`,
+      });
+      return;
+    }
+
     setSubmitState({
       status: "submitting",
       message: "Sending your message...",
@@ -175,8 +278,21 @@ export default function App() {
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null);
+
+        if (response.status === 429) {
+          const retryAfterSeconds = Number(response.headers.get("Retry-After") || 300);
+          const cooldownUntil = Date.now() + retryAfterSeconds * 1000;
+          window.localStorage.setItem(contactCooldownStorageKey, String(cooldownUntil));
+          setCooldownRemainingMs(cooldownUntil - Date.now());
+        }
+
         throw new Error(errorPayload?.message || "Unable to submit form");
       }
+
+      const payload = await response.json().catch(() => null);
+      const cooldownUntil = Date.now() + Number(payload?.cooldownSeconds || contactCooldownMs / 1000) * 1000;
+      window.localStorage.setItem(contactCooldownStorageKey, String(cooldownUntil));
+      setCooldownRemainingMs(cooldownUntil - Date.now());
 
       setSubmitState({
         status: "success",
@@ -193,43 +309,38 @@ export default function App() {
         message:
           error instanceof Error
             ? error.message
-            : "Something went wrong. Please email us directly at contact@zeroone-apps.com.",
+            : "Something went wrong. Please email us directly at info@zerooneitinc.com.",
       });
     }
   }
 
   return (
     <div className="landing-page-shell">
+      <Header
+        brand={landingBrand}
+        className="landing-topbar"
+        navigation={landingNavigation.map((item) =>
+          item.id === "contact"
+            ? {
+                ...item,
+                onClick: scrollToContact,
+              }
+            : item,
+        )}
+      />
       <div className="landing-ambient landing-ambient-left" />
       <div className="landing-ambient landing-ambient-right" />
-      <div className="landing-binary-rain" aria-hidden="true">
-        {binaryColumns.map((column, index) => (
-          <div
-            className="landing-binary-column"
-            key={`${column.pattern}-${index}`}
-            style={{
-              "--column-duration": `${column.duration}s`,
-              "--column-delay": `-${column.delay}s`,
-            }}
-          >
-            {column.segments.map((segment, segmentIndex) => (
-              <span
-                className={segment.active ? "landing-binary-segment landing-is-active" : "landing-binary-segment"}
-                key={`${index}-${segmentIndex}`}
-                style={{ marginBottom: `${segment.gap}px` }}
-              >
-                {segment.text}
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
+      <BinaryRain />
 
       <main className="landing-hero-shell">
         <section className="landing-hero-copy">
           <div className="landing-hero-header">
             <div className="landing-hero-heading-block">
-              <p className="landing-hero-eyebrow">ZeroOne | Information Technology Inc.</p>
+              <p className="landing-hero-eyebrow">
+                <span>ZeroOne</span>
+                <span className="landing-hero-eyebrow-separator" aria-hidden="true" />
+                <span>Information Technology Inc.</span>
+              </p>
               <h1 className="landing-hero-title">Welcome</h1>
               <p className="landing-hero-lead">
                 We build modern websites, internal systems, and custom software that
@@ -261,15 +372,15 @@ export default function App() {
             >
               Learn More
             </a>
-            <a className="landing-hero-button landing-hero-button-secondary" href="mailto:contact@zeroone-apps.com">
+            <a className="landing-hero-button landing-hero-button-secondary" href="/#contact" onClick={scrollToContact}>
               Talk to Us
             </a>
           </div>
         </section>
       </main>
 
-      <section className="landing-contact-shell">
-        <div className="landing-contact-section" id="contact">
+      <section className="landing-contact-shell" id="contact">
+        <div className="landing-contact-section">
           <div className="landing-contact-grid">
             <div className="landing-contact-copy">
               <div className="landing-contact-chip">
@@ -352,9 +463,13 @@ export default function App() {
                 <button
                   className="landing-contact-submit"
                   type="submit"
-                  disabled={submitState.status === "submitting"}
+                  disabled={submitState.status === "submitting" || isContactCoolingDown}
                 >
-                  {submitState.status === "submitting" ? "Sending..." : "Submit"}
+                  {submitState.status === "submitting"
+                    ? "Sending..."
+                    : isContactCoolingDown
+                      ? `Send again in ${cooldownLabel}`
+                      : "Submit"}
                 </button>
                 <p
                   className={
@@ -385,8 +500,8 @@ export default function App() {
               </p>
               <div className="landing-footer-direct">
                 <p className="landing-footer-label">Direct Contact</p>
-                <a className="landing-footer-direct-link" href="mailto:contact@zeroone-apps.com">
-                  contact@zeroone-apps.com
+                <a className="landing-footer-direct-link" href="mailto:info@zerooneitinc.com">
+                  info@zerooneitinc.com
                 </a>
                 <a className="landing-footer-direct-link" href="tel:+639190797137">
                   +63 919 079 7137
@@ -433,11 +548,6 @@ export default function App() {
 
           <div className="landing-footer-bottom">
             <p className="landing-footer-copyright">© 2026 ZEROONE IT INC. ALL RIGHTS RESERVED.</p>
-            <p className="landing-footer-country">
-              SEC REGISTERED
-              <span className="landing-footer-country-separator">•</span>
-              BIR REGISTERED
-            </p>
             <a className="landing-footer-cta" href="mailto:hello@zeroone-apps.com">
               Start a Project
             </a>

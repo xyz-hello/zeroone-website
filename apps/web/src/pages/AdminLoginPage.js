@@ -44,6 +44,9 @@ function AdminLoginPage() {
       }
 
       window.localStorage.setItem('zerooneAdminToken', payload.token);
+      window.localStorage.setItem('zerooneAdminUser', JSON.stringify(payload.user));
+      window.history.pushState({}, '', '/admin/mail-config');
+      window.dispatchEvent(new PopStateEvent('popstate'));
       setSubmitState({
         status: 'success',
         message: 'Signed in successfully.'

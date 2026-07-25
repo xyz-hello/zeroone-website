@@ -239,6 +239,6 @@ export const companyProfile = {
     id: 'contact',
     title: 'Contact',
     description: 'Get in Touch With Us',
-    email: 'contact@zeroone-apps.com'
+    email: 'info@zerooneitinc.com'
   }
 };

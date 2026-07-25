@@ -4,21 +4,24 @@ const { ChatKnowledge, ChatMessage } = require('../models');
 
 const router = express.Router();
 const fallbackAnswer =
-  "I don't have a database answer for that yet. Please contact ZeroOne at contact@zeroone-apps.com so the team can help you directly.";
+  "I don't have a database answer for that yet. Please contact ZeroOne at info@zerooneitinc.com so the team can help you directly.";
+const shortTokens = new Set(['hi', 'yo']);
 
 function tokenize(value) {
   return String(value || '')
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
-    .filter((word) => word.length >= 3);
+    .filter((word) => word.length >= 3 || shortTokens.has(word));
 }
 
 function scoreKnowledge(messageTokens, item) {
   const sourceTokens = tokenize(`${item.title} ${item.question} ${item.keywords || ''}`);
   const source = new Set(sourceTokens);
 
-  return messageTokens.reduce((score, token) => score + (source.has(token) ? 1 : 0), 0);
+  const score = messageTokens.reduce((total, token) => total + (source.has(token) ? 1 : 0), 0);
+
+  return item.title.startsWith('Service -') && score > 0 ? score + 1 : score;
 }
 
 async function findBestKnowledgeAnswer(message) {

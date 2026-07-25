@@ -1,7 +1,11 @@
 const express = require('express');
 
+const { MailConfig } = require('../models');
+
 const router = express.Router();
 const graphBaseUrl = 'https://graph.microsoft.com/v1.0';
+const contactCooldownMs = 5 * 60 * 1000;
+const contactCooldowns = new Map();
 
 class ContactError extends Error {
   constructor(message, statusCode = 500) {
@@ -35,23 +39,54 @@ function validatePayload(payload) {
   };
 }
 
-async function getAccessToken() {
-  const tenantId = process.env.MS_TENANT_ID;
-  const clientId = process.env.MS_CLIENT_ID;
-  const clientSecret = process.env.MS_CLIENT_SECRET;
+function getCooldownKey(req, email) {
+  return `${req.ip || req.socket?.remoteAddress || 'unknown'}:${email.toLowerCase()}`;
+}
 
-  if (!tenantId || !clientId || !clientSecret) {
+function getCooldownRemainingMs(key) {
+  const nextAllowedAt = contactCooldowns.get(key);
+
+  if (!nextAllowedAt) {
+    return 0;
+  }
+
+  const remainingMs = nextAllowedAt - Date.now();
+
+  if (remainingMs <= 0) {
+    contactCooldowns.delete(key);
+    return 0;
+  }
+
+  return remainingMs;
+}
+
+async function getMailConfig() {
+  const storedConfig = await MailConfig.findOne({
+    order: [['id', 'ASC']]
+  });
+
+  return {
+    tenantId: storedConfig?.tenantId || process.env.MS_TENANT_ID,
+    clientId: storedConfig?.clientId || process.env.MS_CLIENT_ID,
+    clientSecret: storedConfig?.clientSecret || process.env.MS_CLIENT_SECRET,
+    senderEmail: storedConfig?.senderEmail || process.env.MS_SENDER_EMAIL,
+    recipientEmail: storedConfig?.recipientEmail || process.env.MS_RECIPIENT_EMAIL || 'info@zerooneitinc.com'
+  };
+}
+
+async function getAccessToken(mailConfig) {
+  if (!mailConfig.tenantId || !mailConfig.clientId || !mailConfig.clientSecret) {
     throw new ContactError('Server email configuration is incomplete.');
   }
 
   const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
+    client_id: mailConfig.clientId,
+    client_secret: mailConfig.clientSecret,
     scope: 'https://graph.microsoft.com/.default',
     grant_type: 'client_credentials'
   });
 
-  const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+  const response = await fetch(`https://login.microsoftonline.com/${mailConfig.tenantId}/oauth2/v2.0/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded'
@@ -67,15 +102,12 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-async function sendMail({ accessToken, name, email, message }) {
-  const senderEmail = process.env.MS_SENDER_EMAIL;
-  const recipientEmail = process.env.MS_RECIPIENT_EMAIL || 'contact@zeroone-apps.com';
-
-  if (!senderEmail) {
+async function sendMail({ accessToken, mailConfig, name, email, message }) {
+  if (!mailConfig.senderEmail) {
     throw new ContactError('MS_SENDER_EMAIL is missing.');
   }
 
-  const response = await fetch(`${graphBaseUrl}/users/${encodeURIComponent(senderEmail)}/sendMail`, {
+  const response = await fetch(`${graphBaseUrl}/users/${encodeURIComponent(mailConfig.senderEmail)}/sendMail`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -97,7 +129,7 @@ async function sendMail({ accessToken, name, email, message }) {
         toRecipients: [
           {
             emailAddress: {
-              address: recipientEmail
+              address: mailConfig.recipientEmail
             }
           }
         ],
@@ -114,21 +146,39 @@ async function sendMail({ accessToken, name, email, message }) {
   });
 
   if (!response.ok) {
-    throw new ContactError('Unable to send email through Microsoft Graph.');
+    const errorText = await response.text().catch(() => '');
+    console.error('Microsoft Graph sendMail failed:', {
+      status: response.status,
+      body: errorText
+    });
+    throw new ContactError(`Unable to send email through Microsoft Graph. Status: ${response.status}.`);
   }
 }
 
 router.post('/', async (req, res, next) => {
   try {
     const payload = validatePayload(req.body);
-    const accessToken = await getAccessToken();
+    const cooldownKey = getCooldownKey(req, payload.email);
+    const cooldownRemainingMs = getCooldownRemainingMs(cooldownKey);
+
+    if (cooldownRemainingMs > 0) {
+      res.set('Retry-After', String(Math.ceil(cooldownRemainingMs / 1000)));
+      throw new ContactError('Please wait 5 minutes before sending another message.', 429);
+    }
+
+    const mailConfig = await getMailConfig();
+    const accessToken = await getAccessToken(mailConfig);
 
     await sendMail({
       accessToken,
+      mailConfig,
       ...payload
     });
 
+    contactCooldowns.set(cooldownKey, Date.now() + contactCooldownMs);
+
     res.json({
+      cooldownSeconds: contactCooldownMs / 1000,
       message: 'Thanks. Your message has been sent.'
     });
   } catch (error) {

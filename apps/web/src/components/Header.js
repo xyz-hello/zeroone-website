@@ -1,6 +1,6 @@
-function Header({ brand, navigation, contactHref }) {
+function Header({ brand, className = '', navigation, contactHref }) {
   return (
-    <header className="topbar">
+    <header className={`topbar ${className}`}>
       <a className="brand" href="/" aria-label="ZeroOne home">
         <div className="brand-copy">
           <strong>{brand.name}</strong>
@@ -9,15 +9,17 @@ function Header({ brand, navigation, contactHref }) {
 
       <nav className="nav" aria-label="Primary">
         {navigation.map((item) => (
-          <a key={item.id} className="nav-link" href={item.href ?? `#${item.id}`}>
+          <a key={item.id} className="nav-link" href={item.href ?? `#${item.id}`} onClick={item.onClick}>
             {item.label}
           </a>
         ))}
       </nav>
 
-      <a className="btn btn-outline" href={contactHref}>
-        Contact Us
-      </a>
+      {contactHref ? (
+        <a className="btn btn-outline" href={contactHref}>
+          Contact Us
+        </a>
+      ) : null}
     </header>
   );
 }

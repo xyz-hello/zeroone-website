@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import LandingPage from './pages/LandingPage';
 import AboutPage from './pages/AboutPage';
 import AdminLoginPage from './pages/AdminLoginPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 
 function getRouteFromLocation() {
   const { hash, pathname } = window.location;
@@ -16,6 +17,13 @@ function getRouteFromLocation() {
   if (pathname === '/admin/login') {
     return {
       page: 'admin-login',
+      anchor: ''
+    };
+  }
+
+  if (pathname === '/admin/mail-config') {
+    return {
+      page: 'admin-mail-config',
       anchor: ''
     };
   }
@@ -67,6 +75,10 @@ function App() {
   const page = useMemo(() => {
     if (route.page === 'admin-login') {
       return <AdminLoginPage />;
+    }
+
+    if (route.page === 'admin-mail-config') {
+      return <AdminDashboardPage />;
     }
 
     if (route.page === 'about') {
