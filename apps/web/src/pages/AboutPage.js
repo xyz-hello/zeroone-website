@@ -11,8 +11,10 @@ import TeamSection from '../components/TeamSection';
 import TextSection from '../components/TextSection';
 import ImpactStatement from '../components/ImpactStatement';
 import { companyProfile } from '../content/companyProfile';
+import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
 const aboutRoute = '/about-us';
+const apiBaseUrl = getApiBaseUrl();
 const aboutTitle = 'About ZeroOne IT Inc. | Software Development Team in the Philippines';
 const aboutDescription =
   'Learn about ZeroOne IT Inc., a Philippine software development company building reliable web, mobile, internal business systems, and AI-powered solutions.';
@@ -70,6 +72,18 @@ function getAboutAnchor() {
   return window.location.hash.replace('#', '');
 }
 
+function resolveUploadedAssetUrl(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  if (!value.startsWith('/api/uploads/')) {
+    return value;
+  }
+
+  return `${apiBaseUrl}${value}`;
+}
+
 const sectionRenderers = {
   text: (section) => (
     <TextSection
@@ -112,22 +126,106 @@ function renderSection(section) {
   return render(section);
 }
 
+function mergeTeamMembers(defaultMembers = [], overrideMembers = []) {
+  return overrideMembers.map((member, index) => {
+    const defaultMember =
+      defaultMembers.find((current) => current.name === member.name) ||
+      defaultMembers[index] ||
+      {};
+
+    return {
+      ...defaultMember,
+      ...member,
+      image: resolveUploadedAssetUrl(member.image || defaultMember.image)
+    };
+  });
+}
+
+function mergeSection(defaultSection, overrideContent) {
+  if (!overrideContent) {
+    return defaultSection;
+  }
+
+  const nextSection = {
+    ...defaultSection,
+    ...overrideContent
+  };
+
+  if (Array.isArray(overrideContent.cards)) {
+    nextSection.cards = overrideContent.cards;
+  }
+
+  if (Array.isArray(overrideContent.members)) {
+    nextSection.members = mergeTeamMembers(defaultSection.members, overrideContent.members);
+  }
+
+  return nextSection;
+}
+
+function mergeAboutContent(profile, overrides) {
+  if (!overrides.length) {
+    return profile;
+  }
+
+  const overrideMap = new Map(overrides.map((item) => [item.sectionId, item.content]));
+  const statsOverride = overrideMap.get('stats');
+  const countersOverride = overrideMap.get('projectCounters');
+
+  return {
+    ...profile,
+    stats: Array.isArray(statsOverride?.items) ? statsOverride.items : profile.stats,
+    projectCounters: Array.isArray(countersOverride?.items) ? countersOverride.items : profile.projectCounters,
+    sections: profile.sections.map((section) => mergeSection(section, overrideMap.get(section.id)))
+  };
+}
+
 function App() {
+  const [aboutContentOverrides, setAboutContentOverrides] = useState([]);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [solutionCardsVisible, setSolutionCardsVisible] = useState(false);
   const solutionProcessRef = useRef(null);
   const solutionCardsInViewRef = useRef(false);
+  const pageProfile = mergeAboutContent(companyProfile, aboutContentOverrides);
   const footerLinks = [
     { label: 'Services', href: `${aboutRoute}#services` },
     { label: 'Solutions', href: `${aboutRoute}#services` },
     { label: 'About', href: `${aboutRoute}#about-us` },
-    { label: 'Contact', href: `${aboutRoute}#${companyProfile.contact.id}` }
+    { label: 'Contact', href: `${aboutRoute}#${pageProfile.contact.id}` }
   ];
   const socialLinks = [
     { label: 'Facebook', href: 'https://www.facebook.com/zeroone.it.inc' },
     { label: 'LinkedIn', href: 'https://www.linkedin.com/company/112718341/admin/dashboard/' },
     { label: 'Instagram', href: 'https://www.instagram.com/zerooneit.inc/' }
   ];
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadAboutContent() {
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/about-content`);
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(payload?.message || 'Unable to load about page content.');
+        }
+
+        if (!ignore) {
+          setAboutContentOverrides(Array.isArray(payload?.sections) ? payload.sections : []);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setAboutContentOverrides([]);
+        }
+      }
+    }
+
+    loadAboutContent();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     const scrollToHashTarget = () => {
@@ -207,7 +305,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const baseNavigation = companyProfile.sections
+  const baseNavigation = pageProfile.sections
     .filter(section => section.id !== 'vision' && section.id !== 'mission')
     .map(({ id, title }) => ({
       id,
@@ -226,12 +324,12 @@ function App() {
   const renderSections = () => {
     const sections = [];
     let i = 0;
-    while (i < companyProfile.sections.length) {
-      const section = companyProfile.sections[i];
+    while (i < pageProfile.sections.length) {
+      const section = pageProfile.sections[i];
       if (section.id === 'about') {
         // Render about with optional vision/mission in a side column
-        const visionSection = companyProfile.sections[i + 1];
-        const missionSection = companyProfile.sections[i + 2];
+        const visionSection = pageProfile.sections[i + 1];
+        const missionSection = pageProfile.sections[i + 2];
         const hasVision = visionSection && visionSection.id === 'vision';
         const hasMission = missionSection && missionSection.id === 'mission';
         sections.push(
@@ -368,17 +466,17 @@ function App() {
         structuredData={aboutStructuredData}
       />
       <Header
-        brand={companyProfile.brand}
+        brand={pageProfile.brand}
         navigation={navigation}
-        contactHref={`${aboutRoute}#${companyProfile.contact.id}`}
+        contactHref={`${aboutRoute}#${pageProfile.contact.id}`}
       />
 
       <main>
         <HeroSection
-          brand={companyProfile.brand}
-          hero={companyProfile.hero}
-          stats={companyProfile.stats}
-          projectCounters={companyProfile.projectCounters}
+          brand={pageProfile.brand}
+          hero={pageProfile.hero}
+          stats={pageProfile.stats}
+          projectCounters={pageProfile.projectCounters}
           logo={logo}
         />
 
@@ -386,11 +484,11 @@ function App() {
 
         <footer
           className="section site-footer reveal-section reveal-delay-4"
-          id={companyProfile.contact.id}
+          id={pageProfile.contact.id}
         >
           <div className="footer-grid">
             <div className="footer-intro">
-              <p className="footer-kicker">{companyProfile.brand.name}</p>
+              <p className="footer-kicker">{pageProfile.brand.name}</p>
               <h2 className="footer-title">Build software that fits the way your business works.</h2>
               <p className="footer-copy">
                 We create modern websites, internal systems, and custom digital tools for teams
@@ -411,8 +509,8 @@ function App() {
             <div className="footer-panel">
               <div className="footer-panel-section">
                 <p className="footer-label">Email</p>
-                <a className="footer-value" href={`mailto:${companyProfile.contact.email}`}>
-                  {companyProfile.contact.email}
+                <a className="footer-value" href={`mailto:${pageProfile.contact.email}`}>
+                  {pageProfile.contact.email}
                 </a>
               </div>
               <div className="footer-panel-section">
@@ -450,7 +548,7 @@ function App() {
               ))}
             </nav>
             <p className="footer-copyright">© 2026 ZeroOne IT Inc. All rights reserved.</p>
-            <a className="footer-cta" href={`mailto:${companyProfile.contact.email}`}>
+            <a className="footer-cta" href={`mailto:${pageProfile.contact.email}`}>
               Start a Project
             </a>
           </div>

@@ -6,6 +6,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 
 function getRouteFromLocation() {
   const { hash, pathname } = window.location;
+  const hasAdminToken = Boolean(window.localStorage.getItem('zerooneAdminToken'));
 
   if (pathname === '/about-us') {
     return {
@@ -22,8 +23,31 @@ function getRouteFromLocation() {
   }
 
   if (pathname === '/admin/mail-config') {
+    if (!hasAdminToken) {
+      window.history.replaceState({}, '', '/admin/login');
+      return {
+        page: 'admin-login',
+        anchor: ''
+      };
+    }
+
     return {
       page: 'admin-mail-config',
+      anchor: ''
+    };
+  }
+
+  if (pathname === '/admin/content') {
+    if (!hasAdminToken) {
+      window.history.replaceState({}, '', '/admin/login');
+      return {
+        page: 'admin-login',
+        anchor: ''
+      };
+    }
+
+    return {
+      page: 'admin-content',
       anchor: ''
     };
   }
@@ -78,7 +102,11 @@ function App() {
     }
 
     if (route.page === 'admin-mail-config') {
-      return <AdminDashboardPage />;
+      return <AdminDashboardPage page="mail-config" />;
+    }
+
+    if (route.page === 'admin-content') {
+      return <AdminDashboardPage page="content" />;
     }
 
     if (route.page === 'about') {

@@ -39,6 +39,7 @@ services:
       SEQUELIZE_CLEAN_DUP_UNIQUE_INDEXES: ${SEQUELIZE_CLEAN_DUP_UNIQUE_INDEXES:-true}
       SEED_CHAT_ON_START: ${SEED_CHAT_ON_START:-true}
       SEED_ADMIN_ON_START: ${SEED_ADMIN_ON_START:-true}
+      TEAM_PHOTO_UPLOAD_MAX_MB: ${TEAM_PHOTO_UPLOAD_MAX_MB:-25}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       PASSWORD_SALT_ROUNDS: ${PASSWORD_SALT_ROUNDS:-12}
@@ -52,6 +53,8 @@ services:
       MS_RECIPIENT_EMAIL: ${MS_RECIPIENT_EMAIL:-info@zerooneitinc.com}
     expose:
       - "4000"
+    volumes:
+      - zeroone_api_uploads:/app/apps/api/uploads
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 20s
@@ -77,3 +80,4 @@ services:
 
 volumes:
   zeroone_mysql_data:
+  zeroone_api_uploads:
