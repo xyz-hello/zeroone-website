@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
 import Seo from '../components/Seo';
 import Toast from '../components/Toast';
+import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
-const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const apiBaseUrl = getApiBaseUrl();
 
 const emptyConfig = {
   tenantId: '',

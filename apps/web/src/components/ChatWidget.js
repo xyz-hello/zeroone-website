@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
-const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const apiBaseUrl = getApiBaseUrl();
 const chatStorageTtlHours = Number(process.env.REACT_APP_CHAT_STORAGE_TTL_HOURS || 24);
 const chatStorageTtlMs = Number.isFinite(chatStorageTtlHours) && chatStorageTtlHours > 0
   ? chatStorageTtlHours * 60 * 60 * 1000

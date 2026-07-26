@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import Seo from '../components/Seo';
+import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
-const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const apiBaseUrl = getApiBaseUrl();
 
 function AdminLoginPage() {
   const [formState, setFormState] = useState({

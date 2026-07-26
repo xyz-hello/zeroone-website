@@ -6,11 +6,12 @@ import zeroOneLogo from "../assets/landing/zeroone-logo.png";
 import ChatWidget from "../components/ChatWidget";
 import Header from "../components/Header";
 import Seo, { defaultSiteUrl, toAbsoluteUrl } from "../components/Seo";
+import { getApiBaseUrl } from "../utils/apiBaseUrl";
 
 const companyProfileAboutUrl = "/about-us";
 const companyProfileServicesUrl = "/about-us#services";
 const companyProfileHomeUrl = "/";
-const apiBaseUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
+const apiBaseUrl = getApiBaseUrl();
 const contactCooldownStorageKey = "zerooneContactCooldownUntil";
 const contactCooldownMs = 5 * 60 * 1000;
 const landingBrand = {
