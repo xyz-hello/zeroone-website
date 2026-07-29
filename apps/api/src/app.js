@@ -17,6 +17,8 @@ const mailConfigRoutes = require('./routes/mail-config.routes');
 
 const app = express();
 
+app.set('trust proxy', true);
+
 app.use(
   helmet({
     crossOriginResourcePolicy: {
