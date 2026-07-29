@@ -47,7 +47,7 @@ function AdminLoginPage() {
 
       window.localStorage.setItem('zerooneAdminToken', payload.token);
       window.localStorage.setItem('zerooneAdminUser', JSON.stringify(payload.user));
-      window.history.pushState({}, '', '/admin/content');
+      window.history.pushState({}, '', '/admin/dashboard');
       window.dispatchEvent(new PopStateEvent('popstate'));
       setSubmitState({
         status: 'success',

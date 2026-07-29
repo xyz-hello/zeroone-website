@@ -3,6 +3,9 @@ import LandingPage from './pages/LandingPage';
 import AboutPage from './pages/AboutPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import { getApiBaseUrl } from './utils/apiBaseUrl';
+
+const apiBaseUrl = getApiBaseUrl();
 
 function getRouteFromLocation() {
   const { hash, pathname } = window.location;
@@ -18,6 +21,21 @@ function getRouteFromLocation() {
   if (pathname === '/admin/login') {
     return {
       page: 'admin-login',
+      anchor: ''
+    };
+  }
+
+  if (pathname === '/admin' || pathname === '/admin/dashboard') {
+    if (!hasAdminToken) {
+      window.history.replaceState({}, '', '/admin/login');
+      return {
+        page: 'admin-login',
+        anchor: ''
+      };
+    }
+
+    return {
+      page: 'admin-dashboard',
       anchor: ''
     };
   }
@@ -111,9 +129,30 @@ function App() {
     });
   }, [route]);
 
+  useEffect(() => {
+    if (!['landing', 'about'].includes(route.page)) {
+      return;
+    }
+
+    const path = `${window.location.pathname}${window.location.hash}`;
+
+    fetch(`${apiBaseUrl}/api/analytics/track`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ path }),
+      keepalive: true
+    }).catch(() => {});
+  }, [route.page, route.anchor]);
+
   const page = useMemo(() => {
     if (route.page === 'admin-login') {
       return <AdminLoginPage />;
+    }
+
+    if (route.page === 'admin-dashboard') {
+      return <AdminDashboardPage page="dashboard" />;
     }
 
     if (route.page === 'admin-mail-config') {

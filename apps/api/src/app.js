@@ -7,6 +7,7 @@ const path = require('path');
 
 const { appConfig } = require('./config/env');
 const aboutContentRoutes = require('./routes/about-content.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
 const authRoutes = require('./routes/auth.routes');
 const chatKnowledgeRoutes = require('./routes/chat-knowledge.routes');
 const chatRoutes = require('./routes/chat.routes');
@@ -32,6 +33,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/about-content', aboutContentRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/contact', contactRoutes);

@@ -26,7 +26,18 @@ const emptyKnowledgeDraft = {
   isActive: true,
   showInFaq: false
 };
+const emptyTrafficData = {
+  summary: {
+    uniqueVisits: 0,
+    pageViews: 0,
+    uniqueVisitsChange: 0,
+    pageViewsChange: 0
+  },
+  days: [],
+  visits: []
+};
 const knowledgeEntriesPageSize = 10;
+const recentVisitorsPageSize = 10;
 const entraClientSecretUrl =
   'https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Credentials/appId/f8c08f17-5427-4722-a943-fa6ed8a912f1/isMSAApp~/false';
 
@@ -170,6 +181,13 @@ function isUploadedTeamPhoto(value) {
 }
 
 function getAdminPageMeta(page) {
+  if (page === 'dashboard') {
+    return {
+      title: 'Admin Dashboard',
+      canonicalPath: '/admin/dashboard'
+    };
+  }
+
   if (page === 'content') {
     return {
       title: 'Content Management',
@@ -236,7 +254,89 @@ function getSecretExpiryStatus(secretExpiresAt) {
   };
 }
 
-function AdminDashboardPage({ page = 'mail-config' }) {
+function formatMetric(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+function formatPercentChange(value) {
+  const numericValue = Number(value || 0);
+  const sign = numericValue > 0 ? '+' : '';
+
+  return `${sign}${numericValue}% from previous 30 days`;
+}
+
+function getChangeClass(value) {
+  return Number(value || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600';
+}
+
+function getCountryFlag(countryCode) {
+  if (!countryCode || countryCode.length !== 2) {
+    return String.fromCodePoint(0x1f310);
+  }
+
+  return countryCode
+    .toUpperCase()
+    .split('')
+    .map((character) => String.fromCodePoint(127397 + character.charCodeAt(0)))
+    .join('');
+}
+
+function formatVisitedAt(value) {
+  if (!value) {
+    return 'Unknown date';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(new Date(value));
+}
+
+function createChartPath(values, width = 360, height = 110) {
+  const numericValues = values.length ? values.map((value) => Number(value || 0)) : [0];
+  const maxValue = Math.max(...numericValues, 1);
+  const step = numericValues.length > 1 ? width / (numericValues.length - 1) : width;
+  const points = numericValues.map((value, index) => {
+    const x = index * step;
+    const y = height - (value / maxValue) * (height - 12) - 6;
+
+    return [x, y];
+  });
+
+  return {
+    line: points.map(([x, y]) => `${x},${y}`).join(' '),
+    area: `M ${points[0][0]} ${height} L ${points.map(([x, y]) => `${x} ${y}`).join(' L ')} L ${
+      points[points.length - 1][0]
+    } ${height} Z`
+  };
+}
+
+function TrafficChart({ values }) {
+  const chart = createChartPath(values);
+
+  return (
+    <svg className="mt-5 h-28 w-full" viewBox="0 0 360 110" preserveAspectRatio="none" aria-hidden="true">
+      <path d={chart.area} fill="rgba(59, 130, 246, 0.18)" />
+      <polyline fill="none" points={chart.line} stroke="#1d7cff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+    </svg>
+  );
+}
+
+function TrafficMetricCard({ change, label, value, values }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-5">
+      <h3 className="text-sm font-black text-slate-950">{label}</h3>
+      <p className="mt-7 text-4xl font-normal tracking-normal text-slate-950">{formatMetric(value)}</p>
+      <p className={`mt-1 text-sm font-semibold ${getChangeClass(change)}`}>{formatPercentChange(change)}</p>
+      <TrafficChart values={values} />
+    </article>
+  );
+}
+
+function AdminDashboardPage({ page = 'dashboard' }) {
   const [config, setConfig] = useState(emptyConfig);
   const [contentSections, setContentSections] = useState(() => getEditableSections());
   const [activeSectionId, setActiveSectionId] = useState(() => getDefaultContentSectionId(getEditableSections()));
@@ -259,7 +359,10 @@ function AdminDashboardPage({ page = 'mail-config' }) {
   const [knowledgeDraft, setKnowledgeDraft] = useState(emptyKnowledgeDraft);
   const [knowledgeDeleteTarget, setKnowledgeDeleteTarget] = useState(null);
   const [knowledgeEntriesPage, setKnowledgeEntriesPage] = useState(1);
+  const [recentVisitorsPage, setRecentVisitorsPage] = useState(1);
+  const [trafficData, setTrafficData] = useState(emptyTrafficData);
   const knowledgeEntriesListRef = useRef(null);
+  const recentVisitorsListRef = useRef(null);
 
   const token = window.localStorage.getItem('zerooneAdminToken') || '';
   const storedUser = JSON.parse(window.localStorage.getItem('zerooneAdminUser') || 'null');
@@ -274,6 +377,13 @@ function AdminDashboardPage({ page = 'mail-config' }) {
     (knowledgeEntriesPage - 1) * knowledgeEntriesPageSize,
     knowledgeEntriesPage * knowledgeEntriesPageSize
   );
+  const recentVisitorsTotalPages = Math.max(Math.ceil(trafficData.visits.length / recentVisitorsPageSize), 1);
+  const paginatedRecentVisitors = trafficData.visits.slice(
+    (recentVisitorsPage - 1) * recentVisitorsPageSize,
+    recentVisitorsPage * recentVisitorsPageSize
+  );
+  const uniqueVisitValues = trafficData.days.map((day) => day.uniqueVisits);
+  const pageViewValues = trafficData.days.map((day) => day.pageViews);
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -291,6 +401,63 @@ function AdminDashboardPage({ page = 'mail-config' }) {
   useEffect(() => {
     setKnowledgeEntriesPage((currentPage) => Math.min(currentPage, knowledgeEntriesTotalPages));
   }, [knowledgeEntriesTotalPages]);
+
+  useEffect(() => {
+    setRecentVisitorsPage((currentPage) => Math.min(currentPage, recentVisitorsTotalPages));
+  }, [recentVisitorsTotalPages]);
+
+  useEffect(() => {
+    if (!token || page !== 'dashboard') {
+      return;
+    }
+
+    async function loadTrafficData() {
+      setStatus({
+        type: 'loading',
+        message: ''
+      });
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/analytics/admin/traffic`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(payload?.message || 'Unable to load website traffic.');
+        }
+
+        setTrafficData({
+          ...emptyTrafficData,
+          ...payload,
+          summary: {
+            ...emptyTrafficData.summary,
+            ...(payload?.summary || {})
+          },
+          days: Array.isArray(payload?.days) ? payload.days : [],
+          visits: Array.isArray(payload?.visits) ? payload.visits : []
+        });
+        setStatus({
+          type: 'idle',
+          message: ''
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to load website traffic.';
+        setStatus({
+          type: 'error',
+          message: ''
+        });
+        setToast({
+          type: 'error',
+          message
+        });
+      }
+    }
+
+    loadTrafficData();
+  }, [page, token]);
 
   useEffect(() => {
     if (!token) {
@@ -817,6 +984,16 @@ function AdminDashboardPage({ page = 'mail-config' }) {
     });
   }
 
+  function handleRecentVisitorsPageChange(nextPage) {
+    setRecentVisitorsPage(nextPage);
+    requestAnimationFrame(() => {
+      recentVisitorsListRef.current?.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+  }
+
   async function handleKnowledgeSubmit(event) {
     event.preventDefault();
 
@@ -978,7 +1155,7 @@ function AdminDashboardPage({ page = 'mail-config' }) {
         />
       ) : null}
 
-      <div className="grid min-h-screen lg:grid-cols-[14.5rem_1fr]">
+      <div className="min-h-screen lg:grid lg:grid-cols-[14.5rem_1fr]">
         <aside
           className={`fixed inset-y-0 left-0 z-40 flex w-[min(18rem,82vw)] -translate-x-full flex-col border-r border-slate-900/10 bg-[#07152b] px-4 py-4 pt-20 text-white shadow-2xl shadow-slate-950/40 transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:min-h-screen lg:w-auto lg:translate-x-0 lg:pt-4 lg:shadow-none ${
             isSidebarOpen ? 'translate-x-0' : ''
@@ -997,6 +1174,30 @@ function AdminDashboardPage({ page = 'mail-config' }) {
           <nav className="mt-8 grid gap-6" aria-label="Admin navigation">
             <section className="grid gap-2">
               <p className="px-3 text-xs font-black uppercase tracking-[0.24em] text-blue-200/55">Main</p>
+              <a
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-black shadow-lg shadow-black/10 transition ${
+                  page === 'dashboard'
+                    ? 'border-blue-200/15 bg-blue-500/10 text-white'
+                    : 'border-transparent text-blue-100/75 hover:bg-white/10 hover:text-white'
+                }`}
+                href="/admin/dashboard"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-300/15 text-blue-100" aria-hidden="true">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M4.75 5.75A1.75 1.75 0 0 1 6.5 4h3.25v6.25h-5v-4.5ZM14.25 4h3.25a1.75 1.75 0 0 1 1.75 1.75v3.25h-5V4ZM4.75 14.75h5V20H6.5a1.75 1.75 0 0 1-1.75-1.75v-3.5ZM14.25 13.5h5v4.75A1.75 1.75 0 0 1 17.5 20h-3.25v-6.5Z"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                  </svg>
+                </span>
+                Dashboard
+                {page === 'dashboard' ? (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-200" aria-hidden="true" />
+                ) : null}
+              </a>
               <a
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-black shadow-lg shadow-black/10 transition ${
                   page === 'content'
@@ -1128,8 +1329,106 @@ function AdminDashboardPage({ page = 'mail-config' }) {
           </div>
         </aside>
 
-        <section className="px-5 py-20 sm:px-8 lg:px-10 lg:py-8">
-          {page === 'content' ? (
+        <section className="min-w-0 w-full overflow-x-hidden px-5 py-20 sm:px-8 lg:px-10 lg:py-8">
+          {page === 'dashboard' ? (
+            <div className="w-full max-w-6xl">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Dashboard</p>
+              <h1 className="mt-3 text-4xl font-black tracking-normal text-slate-950">Admin Dashboard</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                Review public website traffic, recent visitor activity, and the pages people are opening.
+              </p>
+
+              <section className="mt-8 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg shadow-slate-200/80">
+                <div className="border-b border-slate-200 p-5 sm:p-6">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Website Traffic</p>
+                  <h2 className="mt-2 text-xl font-black text-slate-950">Customer page activity</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Page views and unique visits from the last 30 days.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-2">
+                  <TrafficMetricCard
+                    label="Unique Visits"
+                    value={trafficData.summary.uniqueVisits}
+                    change={trafficData.summary.uniqueVisitsChange}
+                    values={uniqueVisitValues}
+                  />
+                  <TrafficMetricCard
+                    label="Page Views"
+                    value={trafficData.summary.pageViews}
+                    change={trafficData.summary.pageViewsChange}
+                    values={pageViewValues}
+                  />
+                </div>
+              </section>
+
+              <section className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg shadow-slate-200/80">
+                <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 p-5 sm:p-6">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Recent Visitors</p>
+                    <h2 className="mt-2 text-xl font-black text-slate-950">Visitor IP activity</h2>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                    Last 30 Days
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto" ref={recentVisitorsListRef}>
+                  <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                    <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      <tr>
+                        <th className="px-5 py-3">IP Address</th>
+                        <th className="px-5 py-3">Country</th>
+                        <th className="px-5 py-3">Device</th>
+                        <th className="px-5 py-3">Browser</th>
+                        <th className="px-5 py-3">Page</th>
+                        <th className="px-5 py-3">Visited</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {paginatedRecentVisitors.map((visit) => (
+                        <tr key={visit.id} className="text-slate-700">
+                          <td className="px-5 py-4 font-bold text-slate-950">{visit.ipAddress}</td>
+                          <td className="px-5 py-4">
+                            <span className="inline-flex items-center gap-2 font-semibold">
+                              <span aria-hidden="true">{getCountryFlag(visit.countryCode)}</span>
+                              {visit.countryName || 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4">{visit.device || 'Unknown'}</td>
+                          <td className="px-5 py-4">{visit.browser || 'Unknown'}</td>
+                          <td className="px-5 py-4">
+                            <span className="inline-flex max-w-[14rem] truncate rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800">
+                              {visit.path || '/'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap">{formatVisitedAt(visit.visitedAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {!trafficData.visits.length ? (
+                  <div className="p-5 text-sm font-semibold text-slate-500 sm:p-6">
+                    No visitor activity recorded yet. Public page visits will appear here after the tracker receives
+                    traffic.
+                  </div>
+                ) : null}
+
+                <div className="border-t border-slate-200 p-5 sm:p-6">
+                  <Pagination
+                    currentPage={recentVisitorsPage}
+                    itemLabel="visitors"
+                    onPageChange={handleRecentVisitorsPageChange}
+                    pageSize={recentVisitorsPageSize}
+                    totalItems={trafficData.visits.length}
+                  />
+                </div>
+              </section>
+            </div>
+          ) : page === 'content' ? (
             <div className="max-w-[88rem]">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Website Content</p>
               <h1 className="mt-3 text-4xl font-black tracking-normal text-slate-950">Content Management</h1>

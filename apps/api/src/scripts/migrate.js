@@ -195,6 +195,61 @@ async function migrate() {
 
     console.log('Chat knowledge table already exists.');
   }
+
+  if (!normalizedTables.includes('page_visits')) {
+    await queryInterface.createTable('page_visits', {
+      id: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        autoIncrement: true,
+        primaryKey: true,
+        allowNull: false
+      },
+      ip_address: {
+        type: DataTypes.STRING(80),
+        allowNull: false
+      },
+      path: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+      },
+      country_code: {
+        type: DataTypes.STRING(8),
+        allowNull: true
+      },
+      country_name: {
+        type: DataTypes.STRING(120),
+        allowNull: true
+      },
+      device: {
+        type: DataTypes.STRING(80),
+        allowNull: false,
+        defaultValue: 'Desktop'
+      },
+      browser: {
+        type: DataTypes.STRING(80),
+        allowNull: false,
+        defaultValue: 'Unknown'
+      },
+      user_agent: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      },
+      updated_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      }
+    });
+
+    console.log('Created page_visits table.');
+  } else {
+    console.log('Page visits table already exists.');
+  }
 }
 
 if (require.main === module) {
