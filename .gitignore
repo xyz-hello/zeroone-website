@@ -36,6 +36,9 @@ dist-ssr
 /build
 apps/*/build
 
+# uploaded runtime files
+apps/api/uploads/
+
 # environment
 .env
 apps/*/.env
