@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
@@ -280,10 +280,58 @@ function ChatWidget() {
   const [isFaqExpanded, setIsFaqExpanded] = useState(true);
   const [messages, setMessages] = useState(() => loadStoredMessages());
   const [sessionId, setSessionId] = useState(() => createSessionId());
+  const [faqQuestions, setFaqQuestions] = useState(suggestedQuestions);
+
+  const loadFaqQuestions = useCallback(async (isMounted = () => true) => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/chat/faqs?limit=5&t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok || !Array.isArray(payload?.questions)) {
+        return;
+      }
+
+      const questions = payload.questions
+        .map((item) => item?.question)
+        .filter((question) => typeof question === 'string' && question.trim());
+
+      if (isMounted()) {
+        setFaqQuestions(questions);
+      }
+    } catch {
+      if (isMounted()) {
+        setFaqQuestions(suggestedQuestions);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     saveStoredMessages(messages);
   }, [messages]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    loadFaqQuestions(() => isMounted);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadFaqQuestions]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (isOpen) {
+      loadFaqQuestions(() => isMounted);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, loadFaqQuestions]);
 
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -529,7 +577,7 @@ function ChatWidget() {
               </button>
               {isFaqExpanded ? (
                 <div className="grid justify-items-start gap-2">
-                  {suggestedQuestions.map((question) => (
+                  {faqQuestions.map((question) => (
                     <button
                       className="w-fit rounded-full border border-blue-200/15 bg-white/[0.05] px-3 py-2 text-left text-xs font-semibold text-slate-200 transition hover:border-blue-300/40 hover:bg-blue-500/15 hover:text-white disabled:cursor-wait disabled:opacity-60"
                       key={question}

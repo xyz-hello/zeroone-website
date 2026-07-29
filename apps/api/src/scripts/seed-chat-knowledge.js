@@ -7,6 +7,8 @@ require('dotenv').config({
 const { sequelize } = require('../config/database');
 const { ChatKnowledge } = require('../models');
 
+const seededKnowledgePriority = 10;
+const frequentlyAskedTitles = new Set(['Company Overview', 'Services', 'Contact', 'Location', 'Project Start']);
 const knowledgeEntries = [
   {
     title: 'Greeting',
@@ -131,15 +133,21 @@ async function seedChatKnowledge() {
   await sequelize.authenticate();
 
   for (const entry of knowledgeEntries) {
+    const seededEntry = {
+      ...entry,
+      priority: seededKnowledgePriority,
+      isActive: true,
+      showInFaq: frequentlyAskedTitles.has(entry.title)
+    };
     const [record, created] = await ChatKnowledge.findOrCreate({
       where: {
         title: entry.title
       },
-      defaults: entry
+      defaults: seededEntry
     });
 
     if (!created) {
-      await record.update(entry);
+      await record.update(seededEntry);
     }
   }
 

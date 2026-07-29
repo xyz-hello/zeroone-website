@@ -8,6 +8,7 @@ const path = require('path');
 const { appConfig } = require('./config/env');
 const aboutContentRoutes = require('./routes/about-content.routes');
 const authRoutes = require('./routes/auth.routes');
+const chatKnowledgeRoutes = require('./routes/chat-knowledge.routes');
 const chatRoutes = require('./routes/chat.routes');
 const contactRoutes = require('./routes/contact.routes');
 const healthRoutes = require('./routes/health.routes');
@@ -34,6 +35,7 @@ app.use('/api/about-content', aboutContentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/admin/chat-knowledge', chatKnowledgeRoutes);
 app.use('/api/admin/mail-config', mailConfigRoutes);
 app.use('/api/health', healthRoutes);
 

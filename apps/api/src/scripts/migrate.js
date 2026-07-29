@@ -7,6 +7,15 @@ require('dotenv').config({
 
 const { sequelize } = require('../config/database');
 
+async function ensureColumn(queryInterface, tableName, columns, columnName, definition) {
+  if (columns[columnName]) {
+    return;
+  }
+
+  await queryInterface.addColumn(tableName, columnName, definition);
+  console.log(`Added ${tableName}.${columnName} column.`);
+}
+
 async function migrate() {
   const queryInterface = sequelize.getQueryInterface();
   const tables = await queryInterface.showAllTables();
@@ -46,6 +55,11 @@ async function migrate() {
         type: DataTypes.BOOLEAN,
         allowNull: false,
         defaultValue: true
+      },
+      show_in_faq: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
       },
       created_at: {
         type: DataTypes.DATE,
@@ -111,6 +125,75 @@ async function migrate() {
     console.log('Created mail_configs table.');
   } else {
     console.log('Mail configs table already exists.');
+  }
+
+  if (!normalizedTables.includes('chat_knowledge')) {
+    await queryInterface.createTable('chat_knowledge', {
+      id: {
+        type: DataTypes.INTEGER.UNSIGNED,
+        autoIncrement: true,
+        primaryKey: true,
+        allowNull: false
+      },
+      question: {
+        type: DataTypes.TEXT,
+        allowNull: false
+      },
+      title: {
+        type: DataTypes.STRING(160),
+        allowNull: false
+      },
+      answer: {
+        type: DataTypes.TEXT,
+        allowNull: false
+      },
+      keywords: {
+        type: DataTypes.TEXT,
+        allowNull: false
+      },
+      priority: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 10
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      },
+      updated_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW
+      }
+    });
+
+    console.log('Created chat_knowledge table.');
+  } else {
+    const chatKnowledgeColumns = await queryInterface.describeTable('chat_knowledge');
+
+    await ensureColumn(queryInterface, 'chat_knowledge', chatKnowledgeColumns, 'priority', {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 10
+    });
+    await ensureColumn(queryInterface, 'chat_knowledge', chatKnowledgeColumns, 'is_active', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
+    });
+    await ensureColumn(queryInterface, 'chat_knowledge', chatKnowledgeColumns, 'show_in_faq', {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    });
+
+    console.log('Chat knowledge table already exists.');
   }
 }
 

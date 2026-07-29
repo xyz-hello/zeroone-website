@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import Pagination from '../components/Pagination';
 import Seo from '../components/Seo';
 import Toast from '../components/Toast';
 import { companyProfile } from '../content/companyProfile';
@@ -16,8 +17,46 @@ const emptyConfig = {
   secretExpiresAt: '',
   hasClientSecret: false
 };
+const emptyKnowledgeDraft = {
+  id: '',
+  question: '',
+  answer: '',
+  keywords: '',
+  priority: 0,
+  isActive: true,
+  showInFaq: false
+};
+const knowledgeEntriesPageSize = 10;
 const entraClientSecretUrl =
   'https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/Credentials/appId/f8c08f17-5427-4722-a943-fa6ed8a912f1/isMSAApp~/false';
+
+function normalizeBoolean(value, fallback = false) {
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+
+  if (typeof value === 'string') {
+    return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+  }
+
+  return Boolean(value);
+}
+
+function normalizeKnowledgeEntry(entry) {
+  return {
+    ...entry,
+    isActive: normalizeBoolean(entry.isActive),
+    showInFaq: normalizeBoolean(entry.showInFaq)
+  };
+}
 
 function stripRuntimeFields(section) {
   const { image, ...sectionContent } = section;
@@ -130,6 +169,27 @@ function isUploadedTeamPhoto(value) {
   return typeof value === 'string' && value.startsWith('/api/uploads/team/');
 }
 
+function getAdminPageMeta(page) {
+  if (page === 'content') {
+    return {
+      title: 'Content Management',
+      canonicalPath: '/admin/content'
+    };
+  }
+
+  if (page === 'knowledge-base') {
+    return {
+      title: 'Chat Knowledge Base',
+      canonicalPath: '/admin/knowledge-base'
+    };
+  }
+
+  return {
+    title: 'Mail Configuration',
+    canonicalPath: '/admin/mail-config'
+  };
+}
+
 function getSecretExpiryStatus(secretExpiresAt) {
   if (!secretExpiresAt) {
     return {
@@ -183,6 +243,7 @@ function AdminDashboardPage({ page = 'mail-config' }) {
   const [advancedJson, setAdvancedJson] = useState('');
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [status, setStatus] = useState({
     type: 'idle',
     message: ''
@@ -194,6 +255,11 @@ function AdminDashboardPage({ page = 'mail-config' }) {
   const [uploadingMemberKey, setUploadingMemberKey] = useState('');
   const [brokenPreviewImages, setBrokenPreviewImages] = useState({});
   const [pendingPhotoDeletes, setPendingPhotoDeletes] = useState([]);
+  const [knowledgeEntries, setKnowledgeEntries] = useState([]);
+  const [knowledgeDraft, setKnowledgeDraft] = useState(emptyKnowledgeDraft);
+  const [knowledgeDeleteTarget, setKnowledgeDeleteTarget] = useState(null);
+  const [knowledgeEntriesPage, setKnowledgeEntriesPage] = useState(1);
+  const knowledgeEntriesListRef = useRef(null);
 
   const token = window.localStorage.getItem('zerooneAdminToken') || '';
   const storedUser = JSON.parse(window.localStorage.getItem('zerooneAdminUser') || 'null');
@@ -202,6 +268,29 @@ function AdminDashboardPage({ page = 'mail-config' }) {
   const adminInitial = adminName.charAt(0).toUpperCase();
   const expiryStatus = getSecretExpiryStatus(config.secretExpiresAt);
   const activeSection = contentSections.find((section) => section.id === activeSectionId) || contentSections[0];
+  const adminPageMeta = getAdminPageMeta(page);
+  const knowledgeEntriesTotalPages = Math.max(Math.ceil(knowledgeEntries.length / knowledgeEntriesPageSize), 1);
+  const paginatedKnowledgeEntries = knowledgeEntries.slice(
+    (knowledgeEntriesPage - 1) * knowledgeEntriesPageSize,
+    knowledgeEntriesPage * knowledgeEntriesPageSize
+  );
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+    setIsProfileMenuOpen(false);
+  }, [page]);
+
+  useEffect(() => {
+    document.body.style.overflow = isSidebarOpen ? 'hidden' : '';
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isSidebarOpen]);
+
+  useEffect(() => {
+    setKnowledgeEntriesPage((currentPage) => Math.min(currentPage, knowledgeEntriesTotalPages));
+  }, [knowledgeEntriesTotalPages]);
 
   useEffect(() => {
     if (!token) {
@@ -301,6 +390,50 @@ function AdminDashboardPage({ page = 'mail-config' }) {
     }
 
     loadContent();
+  }, [page, token]);
+
+  useEffect(() => {
+    if (!token || page !== 'knowledge-base') {
+      return;
+    }
+
+    async function loadKnowledgeEntries() {
+      setStatus({
+        type: 'loading',
+        message: ''
+      });
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/admin/chat-knowledge`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(payload?.message || 'Unable to load chat knowledge base.');
+        }
+
+        setKnowledgeEntries(Array.isArray(payload?.entries) ? payload.entries.map(normalizeKnowledgeEntry) : []);
+        setStatus({
+          type: 'idle',
+          message: ''
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unable to load chat knowledge base.';
+        setStatus({
+          type: 'error',
+          message: ''
+        });
+        setToast({
+          type: 'error',
+          message
+        });
+      }
+    }
+
+    loadKnowledgeEntries();
   }, [page, token]);
 
   useEffect(() => {
@@ -644,6 +777,160 @@ function AdminDashboardPage({ page = 'mail-config' }) {
     }
   }
 
+  function handleKnowledgeDraftChange(event) {
+    const { checked, name, type, value } = event.target;
+
+    setKnowledgeDraft((current) => ({
+      ...current,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  }
+
+  function resetKnowledgeDraft() {
+    setKnowledgeDraft(emptyKnowledgeDraft);
+  }
+
+  function handleEditKnowledge(entry) {
+    setKnowledgeDraft({
+      id: entry.id,
+      question: entry.question || '',
+      answer: entry.answer || '',
+      keywords: entry.keywords || '',
+      priority: entry.priority || 0,
+      isActive: normalizeBoolean(entry.isActive),
+      showInFaq: normalizeBoolean(entry.showInFaq)
+    });
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  }
+
+  function handleKnowledgeEntriesPageChange(nextPage) {
+    setKnowledgeEntriesPage(nextPage);
+    requestAnimationFrame(() => {
+      knowledgeEntriesListRef.current?.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+  }
+
+  async function handleKnowledgeSubmit(event) {
+    event.preventDefault();
+
+    setStatus({
+      type: 'loading',
+      message: ''
+    });
+
+    const isEditing = Boolean(knowledgeDraft.id);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/admin/chat-knowledge${isEditing ? `/${knowledgeDraft.id}` : ''}`,
+        {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            question: knowledgeDraft.question,
+            answer: knowledgeDraft.answer,
+            keywords: knowledgeDraft.keywords,
+            priority: Number(knowledgeDraft.priority) || 0,
+            isActive: knowledgeDraft.isActive,
+            showInFaq: knowledgeDraft.showInFaq
+          })
+        }
+      );
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(payload?.message || 'Unable to save knowledge base entry.');
+      }
+
+      setKnowledgeEntries((current) => {
+        const nextEntries = isEditing
+          ? current.map((entry) => (entry.id === payload.entry.id ? normalizeKnowledgeEntry(payload.entry) : entry))
+          : [...current, normalizeKnowledgeEntry(payload.entry)];
+
+        return nextEntries.sort((a, b) => (b.priority || 0) - (a.priority || 0) || a.id - b.id);
+      });
+      resetKnowledgeDraft();
+      setStatus({
+        type: 'success',
+        message: ''
+      });
+      setToast({
+        type: 'success',
+        message: payload.message || 'Knowledge base entry saved.'
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to save knowledge base entry.';
+      setStatus({
+        type: 'error',
+        message: ''
+      });
+      setToast({
+        type: 'error',
+        message
+      });
+    }
+  }
+
+  async function confirmDeleteKnowledge() {
+    if (!knowledgeDeleteTarget) {
+      return;
+    }
+
+    setStatus({
+      type: 'loading',
+      message: ''
+    });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/admin/chat-knowledge/${knowledgeDeleteTarget.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(payload?.message || 'Unable to delete knowledge base entry.');
+      }
+
+      setKnowledgeEntries((current) => current.filter((entry) => entry.id !== knowledgeDeleteTarget.id));
+      if (knowledgeDraft.id === knowledgeDeleteTarget.id) {
+        resetKnowledgeDraft();
+      }
+      setKnowledgeDeleteTarget(null);
+      setStatus({
+        type: 'success',
+        message: ''
+      });
+      setToast({
+        type: 'success',
+        message: payload.message || 'Knowledge base entry deleted.'
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to delete knowledge base entry.';
+      setKnowledgeDeleteTarget(null);
+      setStatus({
+        type: 'error',
+        message: ''
+      });
+      setToast({
+        type: 'error',
+        message
+      });
+    }
+  }
+
   function handleLogout() {
     window.localStorage.removeItem('zerooneAdminToken');
     window.localStorage.removeItem('zerooneAdminUser');
@@ -659,13 +946,44 @@ function AdminDashboardPage({ page = 'mail-config' }) {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <Seo
-        title={`${page === 'content' ? 'Content Management' : 'Mail Configuration'} | ZeroOne IT Inc. Admin`}
+        title={`${adminPageMeta.title} | ZeroOne IT Inc. Admin`}
         description="Private ZeroOne IT Inc. administrator workspace."
-        canonicalPath={page === 'content' ? '/admin/content' : '/admin/mail-config'}
+        canonicalPath={adminPageMeta.canonicalPath}
         noindex
       />
+      <button
+        className="fixed left-4 top-4 z-50 grid h-11 w-11 place-items-center rounded-xl border border-slate-200/20 bg-[#07152b] text-white shadow-2xl shadow-slate-950/30 lg:hidden"
+        type="button"
+        onClick={() => setIsSidebarOpen((current) => !current)}
+        aria-label={isSidebarOpen ? 'Close admin menu' : 'Open admin menu'}
+        aria-expanded={isSidebarOpen}
+      >
+        {isSidebarOpen ? (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+          </svg>
+        )}
+      </button>
+
+      {isSidebarOpen ? (
+        <button
+          className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm lg:hidden"
+          type="button"
+          aria-label="Close admin menu"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      ) : null}
+
       <div className="grid min-h-screen lg:grid-cols-[14.5rem_1fr]">
-        <aside className="flex min-h-screen flex-col border-r border-slate-900/10 bg-[#07152b] px-4 py-4 text-white lg:sticky lg:top-0 lg:h-screen">
+        <aside
+          className={`fixed inset-y-0 left-0 z-40 flex w-[min(18rem,82vw)] -translate-x-full flex-col border-r border-slate-900/10 bg-[#07152b] px-4 py-4 pt-20 text-white shadow-2xl shadow-slate-950/40 transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:min-h-screen lg:w-auto lg:translate-x-0 lg:pt-4 lg:shadow-none ${
+            isSidebarOpen ? 'translate-x-0' : ''
+          }`}
+        >
           <a className="flex items-center gap-3" href="/">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-xs font-black text-[#07152b] shadow-lg shadow-black/20">
               01
@@ -686,6 +1004,7 @@ function AdminDashboardPage({ page = 'mail-config' }) {
                     : 'border-transparent text-blue-100/75 hover:bg-white/10 hover:text-white'
                 }`}
                 href="/admin/content"
+                onClick={() => setIsSidebarOpen(false)}
               >
                 <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-300/15 text-blue-100" aria-hidden="true">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -704,11 +1023,37 @@ function AdminDashboardPage({ page = 'mail-config' }) {
               </a>
               <a
                 className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-black shadow-lg shadow-black/10 transition ${
+                  page === 'knowledge-base'
+                    ? 'border-blue-200/15 bg-blue-500/10 text-white'
+                    : 'border-transparent text-blue-100/75 hover:bg-white/10 hover:text-white'
+                }`}
+                href="/admin/knowledge-base"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-300/15 text-blue-100" aria-hidden="true">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 5.75A2.75 2.75 0 0 1 7.75 3h8.5A2.75 2.75 0 0 1 19 5.75v6.5A2.75 2.75 0 0 1 16.25 15H11l-4.25 4v-4A2.75 2.75 0 0 1 4 12.25v-6.5Z"
+                      stroke="currentColor"
+                      strokeLinejoin="round"
+                      strokeWidth="1.8"
+                    />
+                    <path d="M8 7.5h8M8 10.5h5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+                  </svg>
+                </span>
+                Chat KB
+                {page === 'knowledge-base' ? (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-blue-200" aria-hidden="true" />
+                ) : null}
+              </a>
+              <a
+                className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-black shadow-lg shadow-black/10 transition ${
                   page === 'mail-config'
                     ? 'border-blue-200/15 bg-blue-500/10 text-white'
                     : 'border-transparent text-blue-100/75 hover:bg-white/10 hover:text-white'
                 }`}
                 href="/admin/mail-config"
+                onClick={() => setIsSidebarOpen(false)}
               >
                 <span className="grid h-8 w-8 place-items-center rounded-lg bg-blue-300/15 text-blue-100" aria-hidden="true">
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -783,9 +1128,9 @@ function AdminDashboardPage({ page = 'mail-config' }) {
           </div>
         </aside>
 
-        <section className="px-5 py-8 sm:px-8 lg:px-10">
+        <section className="px-5 py-20 sm:px-8 lg:px-10 lg:py-8">
           {page === 'content' ? (
-            <div className="max-w-6xl">
+            <div className="max-w-[88rem]">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Website Content</p>
               <h1 className="mt-3 text-4xl font-black tracking-normal text-slate-950">Content Management</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
@@ -1026,6 +1371,248 @@ function AdminDashboardPage({ page = 'mail-config' }) {
                 ) : null}
               </div>
             </div>
+          ) : page === 'knowledge-base' ? (
+            <div className="w-full">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">AI Chat</p>
+              <h1 className="mt-3 whitespace-nowrap text-3xl font-black tracking-normal text-slate-950 sm:text-4xl">
+                Chat Knowledge Base
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
+                Manage the questions, answers, keywords, and FAQ items used by the public chat assistant without
+                editing the source code.
+              </p>
+
+              <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,46rem)_minmax(0,1fr)]">
+                <form
+                  className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-lg shadow-slate-200/80 sm:p-6"
+                  onSubmit={handleKnowledgeSubmit}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+                        {knowledgeDraft.id ? 'Editing Entry' : 'New Entry'}
+                      </p>
+                      <h2 className="mt-1 text-2xl font-black text-slate-950">
+                        {knowledgeDraft.id ? knowledgeDraft.question || 'Knowledge Entry' : 'Add Knowledge'}
+                      </h2>
+                    </div>
+                    {knowledgeDraft.id ? (
+                      <button
+                        className="h-10 rounded-md border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-[0.12em] text-slate-700 transition hover:bg-slate-100"
+                        type="button"
+                        onClick={resetKnowledgeDraft}
+                      >
+                        Cancel Edit
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-bold text-slate-800">Question / FAQ Label</span>
+                    <input
+                      className="h-12 rounded-md border border-slate-200 bg-slate-50 px-4 text-sm text-slate-950 outline-none focus:border-blue-400 focus:bg-white"
+                      name="question"
+                      value={knowledgeDraft.question}
+                      onChange={handleKnowledgeDraftChange}
+                      placeholder="What services do you offer?"
+                      required
+                    />
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-bold text-slate-800">Answer</span>
+                    <textarea
+                      className="min-h-44 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-950 outline-none focus:border-blue-400 focus:bg-white"
+                      name="answer"
+                      value={knowledgeDraft.answer}
+                      onChange={handleKnowledgeDraftChange}
+                      placeholder="Write the answer the assistant should send."
+                      required
+                    />
+                    <span className="text-xs font-semibold text-slate-500">
+                      Start a line with "- " when you want the chat bubble to display bullets.
+                    </span>
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-bold text-slate-800">Keywords</span>
+                    <textarea
+                      className="min-h-24 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-950 outline-none focus:border-blue-400 focus:bg-white"
+                      name="keywords"
+                      value={knowledgeDraft.keywords}
+                      onChange={handleKnowledgeDraftChange}
+                      placeholder="services, offer, custom software, web platform"
+                      required
+                    />
+                    <span className="text-xs font-semibold text-slate-500">
+                      Add words or phrases users might type. Separate them with commas or spaces.
+                    </span>
+                  </label>
+
+                  <div className="grid gap-6 sm:grid-cols-[13rem_minmax(0,1fr)] sm:items-end">
+                    <label className="grid gap-2">
+                      <span className="flex items-center justify-between gap-3 text-sm font-bold text-slate-800">
+                        Priority
+                        <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-black text-white">
+                          {knowledgeDraft.priority}
+                        </span>
+                      </span>
+                      <input
+                        className="h-12 w-full cursor-pointer accent-blue-600"
+                        max="10"
+                        min="0"
+                        name="priority"
+                        step="5"
+                        type="range"
+                        value={knowledgeDraft.priority}
+                        onChange={handleKnowledgeDraftChange}
+                      />
+                      <span className="flex justify-between text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+                        <span>0</span>
+                        <span>5</span>
+                        <span>10</span>
+                      </span>
+                    </label>
+
+                    <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-700">
+                      <span className="block font-black uppercase tracking-[0.12em] text-blue-800">Priority Guide</span>
+                      <span className="mt-2 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-black text-emerald-800">
+                          10 Important
+                        </span>
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 font-black text-amber-800">
+                          5 Normal
+                        </span>
+                        <span className="rounded-full bg-slate-200 px-2.5 py-1 font-black text-slate-700">
+                          0 Low
+                        </span>
+                      </span>
+                      <span className="mt-2 block">Higher numbers show first in chat matching and FAQ order.</span>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex min-h-12 items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4">
+                      <input
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        name="isActive"
+                        type="checkbox"
+                        checked={knowledgeDraft.isActive}
+                        onChange={handleKnowledgeDraftChange}
+                      />
+                      <span className="text-sm font-bold text-slate-800">Active in chat answers</span>
+                    </label>
+
+                    <label className="flex min-h-12 items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-4">
+                      <input
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        name="showInFaq"
+                        type="checkbox"
+                        checked={knowledgeDraft.showInFaq}
+                        onChange={handleKnowledgeDraftChange}
+                      />
+                      <span className="text-sm font-bold text-slate-800">Show in Frequently Asked</span>
+                    </label>
+                  </div>
+
+                  <button
+                    className="h-12 rounded-md bg-[#07152b] px-5 text-sm font-black text-white shadow-lg shadow-slate-300/80 transition hover:bg-blue-950 disabled:cursor-wait disabled:opacity-60"
+                    type="submit"
+                    disabled={status.type === 'loading'}
+                  >
+                    {status.type === 'loading'
+                      ? 'Saving...'
+                      : knowledgeDraft.id
+                        ? 'Save Knowledge Entry'
+                        : 'Add Knowledge Entry'}
+                  </button>
+                </form>
+
+                <aside className="grid content-start gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/80">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Entries</p>
+                    <h2 className="mt-1 text-xl font-black text-slate-950">{knowledgeEntries.length} KB Items</h2>
+                  </div>
+
+                  <div
+                    className="grid max-h-[42rem] gap-3 overflow-y-auto pr-1 [scrollbar-color:rgba(34,211,238,0.55)_rgba(226,232,240,0.9)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-cyan-500/60 [&::-webkit-scrollbar-thumb:hover]:bg-cyan-500"
+                    ref={knowledgeEntriesListRef}
+                  >
+                    {paginatedKnowledgeEntries.map((entry, index) => (
+                      <article
+                        className={`rounded-lg border p-3 ${
+                          entry.id === knowledgeDraft.id
+                            ? 'border-blue-300 bg-blue-50'
+                            : 'border-slate-200 bg-slate-50'
+                        }`}
+                        key={entry.id}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 gap-3">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white">
+                              {(knowledgeEntriesPage - 1) * knowledgeEntriesPageSize + index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-black text-slate-950">{entry.question}</h3>
+                              <p className="mt-1 text-xs font-semibold text-slate-500">Priority {entry.priority || 0}</p>
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                            <span
+                              className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${
+                                entry.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+                              }`}
+                            >
+                              {entry.isActive ? 'Chat' : 'Off'}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${
+                                entry.showInFaq === false
+                                  ? 'bg-slate-200 text-slate-600'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {entry.showInFaq === false ? 'No FAQ' : 'FAQ'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-3 line-clamp-3 text-xs leading-5 text-slate-600">{entry.answer}</p>
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            className="h-9 flex-1 rounded-md border border-slate-200 bg-white text-xs font-black uppercase tracking-[0.1em] text-slate-700 transition hover:border-blue-300 hover:text-blue-800"
+                            type="button"
+                            onClick={() => handleEditKnowledge(entry)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="h-9 flex-1 rounded-md border border-rose-200 bg-white text-xs font-black uppercase tracking-[0.1em] text-rose-700 transition hover:bg-rose-50"
+                            type="button"
+                            onClick={() => setKnowledgeDeleteTarget(entry)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+
+                    {!knowledgeEntries.length ? (
+                      <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm font-semibold text-slate-500">
+                        No knowledge entries yet.
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <Pagination
+                    currentPage={knowledgeEntriesPage}
+                    itemLabel="KB items"
+                    onPageChange={handleKnowledgeEntriesPageChange}
+                    pageSize={knowledgeEntriesPageSize}
+                    totalItems={knowledgeEntries.length}
+                  />
+                </aside>
+              </div>
+            </div>
           ) : (
           <div className="max-w-5xl">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Microsoft Graph</p>
@@ -1165,6 +1752,15 @@ function AdminDashboardPage({ page = 'mail-config' }) {
         confirmLabel="Sign Out"
         onCancel={() => setIsLogoutModalOpen(false)}
         onConfirm={handleLogout}
+      />
+      <ConfirmModal
+        isOpen={Boolean(knowledgeDeleteTarget)}
+        title="Delete KB Entry?"
+        message={`This will remove "${knowledgeDeleteTarget?.question || 'this knowledge entry'}" from the chat knowledge base.`}
+        cancelLabel="Keep Entry"
+        confirmLabel="Delete Entry"
+        onCancel={() => setKnowledgeDeleteTarget(null)}
+        onConfirm={confirmDeleteKnowledge}
       />
     </main>
   );

@@ -52,6 +52,21 @@ function getRouteFromLocation() {
     };
   }
 
+  if (pathname === '/admin/knowledge-base') {
+    if (!hasAdminToken) {
+      window.history.replaceState({}, '', '/admin/login');
+      return {
+        page: 'admin-login',
+        anchor: ''
+      };
+    }
+
+    return {
+      page: 'admin-knowledge-base',
+      anchor: ''
+    };
+  }
+
   if (hash === '#contact') {
     return {
       page: 'landing',
@@ -107,6 +122,10 @@ function App() {
 
     if (route.page === 'admin-content') {
       return <AdminDashboardPage page="content" />;
+    }
+
+    if (route.page === 'admin-knowledge-base') {
+      return <AdminDashboardPage page="knowledge-base" />;
     }
 
     if (route.page === 'about') {

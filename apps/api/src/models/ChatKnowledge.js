@@ -25,11 +25,22 @@ const ChatKnowledge = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true
     },
+    priority: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 10
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
       field: 'is_active'
+    },
+    showInFaq: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: 'show_in_faq'
     }
   },
   {
