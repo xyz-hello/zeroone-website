@@ -19,8 +19,8 @@ function cleanIp(value) {
 function getClientIp(req) {
   return cleanIp(
     req.get('cf-connecting-ip') ||
-      req.get('x-real-ip') ||
       req.get('x-forwarded-for') ||
+      req.get('x-real-ip') ||
       req.socket?.remoteAddress ||
       req.ip
   );
