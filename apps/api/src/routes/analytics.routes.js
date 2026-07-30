@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 
 const { requireAuth, requireRole, roles } = require('../middleware/auth');
 const { PageVisit } = require('../models');
-const { getCountryFromIp } = require('../utils/geoip');
+const { getCountryFromIp } = require('../utils/ipCountryLookup');
 
 const router = express.Router();
 const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
