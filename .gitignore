@@ -38,6 +38,8 @@ apps/*/build
 
 # uploaded runtime files
 apps/api/uploads/
+geoip/*.mmdb
+apps/api/geoip/*.mmdb
 
 # environment
 .env

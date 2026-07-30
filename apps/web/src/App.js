@@ -6,6 +6,11 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import { getApiBaseUrl } from './utils/apiBaseUrl';
 
 const apiBaseUrl = getApiBaseUrl();
+const duplicateVisitWindowMs = 1500;
+let lastTrackedVisit = {
+  path: '',
+  time: 0
+};
 
 function getRouteFromLocation() {
   const { hash, pathname } = window.location;
@@ -135,6 +140,16 @@ function App() {
     }
 
     const path = `${window.location.pathname}${window.location.hash}`;
+    const now = Date.now();
+
+    if (lastTrackedVisit.path === path && now - lastTrackedVisit.time < duplicateVisitWindowMs) {
+      return;
+    }
+
+    lastTrackedVisit = {
+      path,
+      time: now
+    };
 
     fetch(`${apiBaseUrl}/api/analytics/track`, {
       method: 'POST',

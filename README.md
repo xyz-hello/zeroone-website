@@ -182,3 +182,18 @@ The deploy workflow packages the checked-out commit, uploads it to `VPS_APP_DIR`
 ```bash
 docker compose --env-file .env up -d --build --remove-orphans
 ```
+
+Optional visitor country lookup uses MaxMind GeoLite2 Country. Create a free MaxMind account, download
+`GeoLite2-Country.mmdb`, and place it on the VPS at:
+
+```bash
+/opt/zeroone-website/geoip/GeoLite2-Country.mmdb
+```
+
+The Docker Compose file mounts `./geoip` into the API container as read-only and reads the database through:
+
+```text
+GEOIP_DB_PATH=/app/geoip/GeoLite2-Country.mmdb
+```
+
+If the file is missing, visitor tracking still works, but countries display as `Unknown`.

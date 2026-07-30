@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 
 const { requireAuth, requireRole, roles } = require('../middleware/auth');
 const { PageVisit } = require('../models');
+const { getCountryFromIp } = require('../utils/geoip');
 
 const router = express.Router();
 const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -26,7 +27,7 @@ function getClientIp(req) {
   );
 }
 
-function getCountry(req) {
+async function getCountry(req, ipAddress) {
   const headerValue =
     req.get('cf-ipcountry') ||
     req.get('x-vercel-ip-country') ||
@@ -163,10 +164,12 @@ router.post('/track', async (req, res, next) => {
     }
 
     const userAgent = req.get('user-agent') || '';
-    const country = getCountry(req);
+    const ipAddress = getClientIp(req);
+    const headerCountry = await getCountry(req, ipAddress);
+    const country = headerCountry.countryCode ? headerCountry : await getCountryFromIp(ipAddress);
 
     await PageVisit.create({
-      ipAddress: getClientIp(req),
+      ipAddress,
       path: path || '/',
       countryCode: country.countryCode,
       countryName: country.countryName,
