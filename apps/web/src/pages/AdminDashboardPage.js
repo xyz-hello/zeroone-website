@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import ConfirmModal from '../components/ConfirmModal';
+import LoadingOverlay from '../components/LoadingOverlay';
 import Pagination from '../components/Pagination';
 import Seo from '../components/Seo';
 import Toast from '../components/Toast';
@@ -208,6 +209,30 @@ function getAdminPageMeta(page) {
   };
 }
 
+function getAdminLoadingMessage(page, uploadingMemberKey, statusMessage) {
+  if (statusMessage) {
+    return statusMessage;
+  }
+
+  if (uploadingMemberKey) {
+    return 'Uploading and optimizing photo...';
+  }
+
+  if (page === 'dashboard') {
+    return 'Loading website traffic...';
+  }
+
+  if (page === 'content') {
+    return 'Loading website content...';
+  }
+
+  if (page === 'knowledge-base') {
+    return 'Loading chat knowledge base...';
+  }
+
+  return 'Loading mail configuration...';
+}
+
 function getSecretExpiryStatus(secretExpiresAt) {
   if (!secretExpiresAt) {
     return {
@@ -414,7 +439,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
     async function loadTrafficData() {
       setStatus({
         type: 'loading',
-        message: ''
+        message: 'Loading website traffic...'
       });
 
       try {
@@ -473,7 +498,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
     async function loadConfig() {
       setStatus({
         type: 'loading',
-        message: ''
+        message: 'Loading mail configuration...'
       });
 
       try {
@@ -521,7 +546,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
     async function loadContent() {
       setStatus({
         type: 'loading',
-        message: ''
+        message: 'Loading website content...'
       });
 
       try {
@@ -567,7 +592,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
     async function loadKnowledgeEntries() {
       setStatus({
         type: 'loading',
-        message: ''
+        message: 'Loading chat knowledge base...'
       });
 
       try {
@@ -625,7 +650,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
     event.preventDefault();
     setStatus({
       type: 'loading',
-      message: ''
+      message: 'Saving mail configuration...'
     });
 
     try {
@@ -812,7 +837,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
     setUploadingMemberKey(`${activeSectionId}-${index}`);
     setStatus({
       type: 'loading',
-      message: ''
+      message: 'Uploading and optimizing photo...'
     });
 
     let uploadedPhotoUrl = '';
@@ -909,7 +934,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
 
     setStatus({
       type: 'loading',
-      message: ''
+      message: 'Saving website content...'
     });
 
     try {
@@ -999,7 +1024,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
 
     setStatus({
       type: 'loading',
-      message: ''
+      message: knowledgeDraft.id ? 'Updating knowledge entry...' : 'Adding knowledge entry...'
     });
 
     const isEditing = Boolean(knowledgeDraft.id);
@@ -1065,7 +1090,7 @@ function AdminDashboardPage({ page = 'dashboard' }) {
 
     setStatus({
       type: 'loading',
-      message: ''
+      message: 'Deleting knowledge entry...'
     });
 
     try {
@@ -1127,6 +1152,10 @@ function AdminDashboardPage({ page = 'dashboard' }) {
         description="Private ZeroOne IT Inc. administrator workspace."
         canonicalPath={adminPageMeta.canonicalPath}
         noindex
+      />
+      <LoadingOverlay
+        isOpen={status.type === 'loading'}
+        message={getAdminLoadingMessage(page, uploadingMemberKey, status.message)}
       />
       <button
         className="fixed left-4 top-4 z-50 grid h-11 w-11 place-items-center rounded-xl border border-slate-200/20 bg-[#07152b] text-white shadow-2xl shadow-slate-950/30 lg:hidden"
