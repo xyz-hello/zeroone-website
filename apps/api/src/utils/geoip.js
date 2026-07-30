@@ -6,6 +6,7 @@ const { appConfig } = require('../config/env');
 
 const countryNames = new Intl.DisplayNames(['en'], { type: 'region' });
 let countryLookupPromise = null;
+let warnedMissingGeoIpDb = false;
 
 function isPrivateIp(ipAddress) {
   if (!ipAddress || ipAddress === 'unknown') {
@@ -35,11 +36,23 @@ function isPrivateIp(ipAddress) {
 
 async function getCountryLookup() {
   if (!appConfig.geoipDbPath || !fs.existsSync(appConfig.geoipDbPath)) {
+    if (!warnedMissingGeoIpDb) {
+      console.warn(
+        `GeoIP database not found. Set GEOIP_DB_PATH to a readable GeoLite2-Country.mmdb file. Current path: ${
+          appConfig.geoipDbPath || '(empty)'
+        }`
+      );
+      warnedMissingGeoIpDb = true;
+    }
+
     return null;
   }
 
   if (!countryLookupPromise) {
-    countryLookupPromise = maxmind.open(appConfig.geoipDbPath);
+    countryLookupPromise = maxmind.open(appConfig.geoipDbPath).catch((error) => {
+      countryLookupPromise = null;
+      throw error;
+    });
   }
 
   return countryLookupPromise;
