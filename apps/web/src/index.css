@@ -3019,6 +3019,17 @@
     }
   }
 
+  @keyframes logoFloatMobile {
+    0%,
+    100% {
+      transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+      transform: translateY(-4px) rotate(0.4deg);
+    }
+  }
+
   @keyframes processLightSweep {
     0% {
       opacity: 0;
@@ -3122,19 +3133,24 @@
       font-size: 0.98rem;
     }
 
+    .hero {
+      padding-top: clamp(11rem, 28vw, 12.5rem);
+    }
+
     .hero-layout {
       grid-template-columns: 1fr;
     }
 
     .hero-logo-wrap {
       order: -1;
-      margin: 0 auto;
+      margin: 0 auto 0.2rem;
     }
 
     .hero-logo {
       width: min(100%, 300px);
       max-width: 100%;
       max-height: 250px;
+      animation-name: logoFloatMobile;
     }
 
     .stats-grid,
