@@ -8,14 +8,17 @@
   #root {
     margin: 0;
     min-height: 100%;
+    background-color: #040712;
   }
 
   html {
     scroll-behavior: smooth;
+    background-color: #040712;
   }
 
   body {
     font-family: 'Manrope', 'Avenir Next', 'Segoe UI', sans-serif;
+    background-color: #040712;
   }
 }
 
@@ -25,6 +28,7 @@
   :root {
     font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
     color: #ecf1ff;
+    background-color: #040712;
     background:
       radial-gradient(800px 500px at 10% -10%, rgba(93, 35, 219, 0.35), transparent 60%),
       radial-gradient(900px 550px at 95% 15%, rgba(35, 145, 255, 0.25), transparent 60%),
@@ -52,16 +56,20 @@
 
   html {
     scroll-behavior: smooth;
+    background-color: #040712;
+    overscroll-behavior-y: none;
   }
 
   body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    background-color: #040712;
     background:
       radial-gradient(800px 500px at 10% -10%, rgba(93, 35, 219, 0.35), transparent 60%),
       radial-gradient(900px 550px at 95% 15%, rgba(35, 145, 255, 0.25), transparent 60%),
       linear-gradient(180deg, #070a1d, #040712);
+    overscroll-behavior-y: none;
   }
 
   a {
@@ -80,6 +88,7 @@
 
   #root {
     min-height: 100vh;
+    background-color: #040712;
   }
 
   .landing-page-shell {
@@ -87,6 +96,10 @@
     overflow: hidden;
     min-height: 100vh;
     padding: clamp(14px, 1.8vw, 24px);
+    background:
+      radial-gradient(800px 500px at 10% -10%, rgba(93, 35, 219, 0.26), transparent 60%),
+      radial-gradient(900px 550px at 95% 15%, rgba(35, 145, 255, 0.2), transparent 60%),
+      linear-gradient(180deg, #070a1d, #040712);
   }
 
   .landing-binary-rain {
@@ -967,14 +980,30 @@
     }
 
     .landing-binary-rain {
+      position: absolute;
       grid-template-columns: repeat(14, minmax(0, 1fr));
       gap: 6px;
-      opacity: 0.36;
+      height: 100%;
+      min-height: 100vh;
+      opacity: 0.28;
+      mask-image: none;
+      transform: none;
+      contain: paint;
     }
 
     .landing-binary-column {
       font-size: 0.95rem;
       letter-spacing: 0.02em;
+      text-shadow: none;
+      will-change: auto;
+    }
+
+    .landing-binary-segment {
+      filter: none;
+    }
+
+    .landing-binary-segment.landing-is-active {
+      text-shadow: 0 0 10px rgba(35, 145, 255, 0.45);
     }
 
     .landing-hero-shell {
