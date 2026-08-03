@@ -1,8 +1,12 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import logo2 from "../assets/landing/logo2.png";
 import birLogo from "../assets/landing/BIR.png";
 import secLogo from "../assets/landing/sec.jpg";
 import zeroOneLogo from "../assets/landing/zeroone-logo.png";
+import italianHolidaysProject from "../assets/featured-projects/italian-holidays-platform.png";
+import madrasaManagementProject from "../assets/featured-projects/madrasa-management-platform.png";
+import pickleballSaasProject from "../assets/featured-projects/pickleball-saas-platform.png";
+import livePosProject from "../assets/featured-projects/live-pos-platform.png";
 import ChatWidget from "../components/ChatWidget";
 import Header from "../components/Header";
 import Seo, { defaultSiteUrl, toAbsoluteUrl } from "../components/Seo";
@@ -164,6 +168,53 @@ const heroCards = [
   },
 ];
 
+const featuredProjects = [
+  {
+    title: "Italian Holidays Travel Platform",
+    description:
+      "A premium travel website experience for curated Italian holiday tours, destination discovery, and lead generation.",
+    image: italianHolidaysProject,
+    alt: "Travel booking platform mockup with Italian coastline imagery",
+    tags: ["Travel Web", "Booking UX", "SEO"],
+    href: "https://italianholidays.net/",
+    cta: "View Live Project",
+    status: "Live",
+  },
+  {
+    title: "Madrasa Management Enrollment System",
+    description:
+      "An ongoing centralized platform for admissions, enrollment, students, attendance, payments, hifz tracking, and reports.",
+    image: madrasaManagementProject,
+    alt: "Madrasa management enrollment system dashboard mockup",
+    tags: ["Enrollment", "Payments", "Reports"],
+    href: "",
+    cta: "Ongoing Project",
+    status: "Ongoing",
+  },
+  {
+    title: "SaaS Pickleball Booking Platform",
+    description:
+      "An ongoing SaaS product for court reservations, player profiles, tournaments, memberships, schedules, and online payments.",
+    image: pickleballSaasProject,
+    alt: "Pickleball SaaS booking platform dashboard and mobile app mockup",
+    tags: ["SaaS", "Bookings", "Payments"],
+    href: "",
+    cta: "Ongoing Project",
+    status: "Ongoing",
+  },
+  {
+    title: "Live POS Platform",
+    description:
+      "A live point-of-sale web app for checkout, inventory, orders, receipts, cashier activity, and daily sales reporting.",
+    image: livePosProject,
+    alt: "Live POS platform dashboard mockup with checkout, inventory, and sales analytics",
+    tags: ["POS", "Inventory", "Sales"],
+    href: "https://pos.zeroone-apps.com/login",
+    cta: "View Live Project",
+    status: "Live",
+  },
+];
+
 const footerCapabilities = [
   { label: "Custom Software", href: companyProfileServicesUrl },
   { label: "AI Automation", href: companyProfileServicesUrl },
@@ -249,7 +300,104 @@ const BinaryRain = memo(function BinaryRain() {
   );
 });
 
+function FeaturedProjectCard({
+  project,
+  positionClass,
+  isActive,
+  isExpanded,
+  onToggleDescription,
+  onPause,
+  onResume,
+}) {
+  const descriptionRef = useRef(null);
+  const [canExpandDescription, setCanExpandDescription] = useState(false);
+
+  useEffect(() => {
+    const descriptionElement = descriptionRef.current;
+
+    if (!descriptionElement || isExpanded) {
+      return undefined;
+    }
+
+    function measureDescriptionOverflow() {
+      window.requestAnimationFrame(() => {
+        if (!descriptionElement.offsetParent) {
+          return;
+        }
+
+        setCanExpandDescription(
+          descriptionElement.scrollHeight > descriptionElement.clientHeight + 1,
+        );
+      });
+    }
+
+    measureDescriptionOverflow();
+    window.addEventListener("resize", measureDescriptionOverflow);
+
+    return () => {
+      window.removeEventListener("resize", measureDescriptionOverflow);
+    };
+  }, [isActive, isExpanded, project.description]);
+
+  return (
+    <article
+      className={`landing-featured-project-card ${positionClass}`}
+      onMouseEnter={isActive ? onPause : undefined}
+      onMouseLeave={isActive ? onResume : undefined}
+      onFocus={isActive ? onPause : undefined}
+      onBlur={isActive ? onResume : undefined}
+    >
+      <div className="landing-featured-project-image-wrap">
+        <img className="landing-featured-project-image" src={project.image} alt={project.alt} />
+        <span className="landing-featured-project-status">{project.status}</span>
+      </div>
+      <div className="landing-featured-project-body">
+        <h3 className="landing-featured-project-name">{project.title}</h3>
+        <p
+          className={
+            isExpanded
+              ? "landing-featured-project-description landing-is-expanded"
+              : "landing-featured-project-description"
+          }
+          ref={descriptionRef}
+        >
+          {project.description}
+        </p>
+        {canExpandDescription ? (
+          <button
+            className="landing-featured-project-more"
+            type="button"
+            onClick={() => onToggleDescription(project.title)}
+          >
+            {isExpanded ? "Show Less" : "Show More"}
+          </button>
+        ) : null}
+        <div className="landing-featured-project-footer">
+          <div className="landing-featured-project-tags" aria-label={`${project.title} technologies`}>
+            {project.tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </div>
+          {project.href ? (
+            <a className="landing-featured-project-link" href={project.href} target="_blank" rel="noreferrer">
+              {project.cta}
+              <span aria-hidden="true">↗</span>
+            </a>
+          ) : (
+            <span className="landing-featured-project-link landing-is-pending">
+              {project.cta}
+            </span>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function App() {
+  const [activeFeaturedProjectIndex, setActiveFeaturedProjectIndex] = useState(1);
+  const [isFeaturedProjectsPaused, setIsFeaturedProjectsPaused] = useState(false);
+  const [expandedFeaturedProjectTitles, setExpandedFeaturedProjectTitles] = useState([]);
   const [cooldownRemainingMs, setCooldownRemainingMs] = useState(0);
   const [formState, setFormState] = useState({
     name: "",
@@ -261,6 +409,16 @@ export default function App() {
   const cooldownMinutes = Math.floor(cooldownTotalSeconds / 60);
   const cooldownSeconds = cooldownTotalSeconds % 60;
   const cooldownLabel = `${cooldownMinutes}:${String(cooldownSeconds).padStart(2, "0")}`;
+  const [submitState, setSubmitState] = useState({
+    status: "idle",
+    message: "",
+  });
+
+  const scrollToFeaturedProject = useCallback((index) => {
+    const nextIndex = Math.min(featuredProjects.length - 1, Math.max(0, index));
+
+    setActiveFeaturedProjectIndex(nextIndex);
+  }, []);
 
   useEffect(() => {
     function syncCooldown() {
@@ -289,10 +447,21 @@ export default function App() {
       window.clearInterval(intervalId);
     };
   }, []);
-  const [submitState, setSubmitState] = useState({
-    status: "idle",
-    message: "",
-  });
+
+  useEffect(() => {
+    if (isFeaturedProjectsPaused) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      const nextIndex = (activeFeaturedProjectIndex + 1) % featuredProjects.length;
+      scrollToFeaturedProject(nextIndex);
+    }, 3800);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeFeaturedProjectIndex, isFeaturedProjectsPaused, scrollToFeaturedProject]);
 
   function scrollToContact(event) {
     event.preventDefault();
@@ -314,6 +483,72 @@ export default function App() {
       top: scrollTop,
       behavior: "smooth",
     });
+  }
+
+  function scrollToFeaturedProjects(event) {
+    event.preventDefault();
+
+    const featuredProjectsSection = document.getElementById("featured-projects");
+    if (!featuredProjectsSection) {
+      return;
+    }
+
+    const topbar = document.querySelector(".landing-topbar");
+    const topbarHeight = topbar?.getBoundingClientRect().height || 72;
+    const scrollTop = Math.max(
+      0,
+      featuredProjectsSection.getBoundingClientRect().top + window.scrollY - topbarHeight - 12,
+    );
+
+    window.history.pushState(null, "", "/#featured-projects");
+    window.scrollTo({
+      top: scrollTop,
+      behavior: "smooth",
+    });
+  }
+
+  function slideFeaturedProjects(direction) {
+    const nextIndex =
+      (activeFeaturedProjectIndex + direction + featuredProjects.length) % featuredProjects.length;
+
+    setIsFeaturedProjectsPaused(true);
+    scrollToFeaturedProject(nextIndex);
+  }
+
+  function getFeaturedProjectPosition(index) {
+    const totalProjects = featuredProjects.length;
+    const previousIndex = (activeFeaturedProjectIndex - 1 + totalProjects) % totalProjects;
+    const nextIndex = (activeFeaturedProjectIndex + 1) % totalProjects;
+
+    if (index === activeFeaturedProjectIndex) {
+      return "landing-is-active";
+    }
+
+    if (index === previousIndex) {
+      return "landing-is-before";
+    }
+
+    if (index === nextIndex) {
+      return "landing-is-after";
+    }
+
+    return "landing-is-hidden";
+  }
+
+  function handleFeaturedProjectsTouchStart(event) {
+    const isTouchingActiveProject = event.target.closest(
+      ".landing-featured-project-card.landing-is-active",
+    );
+
+    setIsFeaturedProjectsPaused(Boolean(isTouchingActiveProject));
+  }
+
+  function toggleFeaturedProjectDescription(title) {
+    setExpandedFeaturedProjectTitles((current) =>
+      current.includes(title)
+        ? current.filter((currentTitle) => currentTitle !== title)
+        : [...current, title],
+    );
   }
 
   function handleChange(event) {
@@ -463,12 +698,88 @@ export default function App() {
             >
               Schedule a Consultation
             </a>
-            <a className="landing-hero-button landing-hero-button-secondary" href="/" onClick={(event) => event.preventDefault()}>
+            <a className="landing-hero-button landing-hero-button-secondary" href="/#featured-projects" onClick={scrollToFeaturedProjects}>
               View Our Work
             </a>
           </div>
         </section>
       </main>
+
+      <section
+        className="landing-featured-projects-shell"
+        id="featured-projects"
+        onTouchStart={handleFeaturedProjectsTouchStart}
+      >
+        <div className="landing-featured-projects-header">
+          <div>
+            <p className="landing-footer-kicker">Featured Projects</p>
+            <h2 className="landing-featured-projects-title">Built for real business momentum.</h2>
+            <p className="landing-featured-projects-lead">
+              Real products. Real impact. Explore the platforms we have built for businesses like yours.
+            </p>
+          </div>
+          <div className="landing-featured-projects-actions">
+            <button
+              className="landing-featured-projects-control"
+              type="button"
+              onClick={() => slideFeaturedProjects(-1)}
+              aria-label="Previous featured projects"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
+            </button>
+            <button
+              className="landing-featured-projects-control"
+              type="button"
+              onClick={() => slideFeaturedProjects(1)}
+              aria-label="Next featured projects"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
+            <a className="landing-featured-projects-contact" href="/#contact" onClick={scrollToContact}>
+              <span>Start Yours</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+        </div>
+
+        <div className="landing-featured-projects-grid">
+          {featuredProjects.map((project, index) => (
+            <FeaturedProjectCard
+              isActive={index === activeFeaturedProjectIndex}
+              isExpanded={expandedFeaturedProjectTitles.includes(project.title)}
+              key={project.title}
+              onPause={() => setIsFeaturedProjectsPaused(true)}
+              onResume={() => setIsFeaturedProjectsPaused(false)}
+              onToggleDescription={toggleFeaturedProjectDescription}
+              positionClass={getFeaturedProjectPosition(index)}
+              project={project}
+            />
+          ))}
+        </div>
+
+        <div className="landing-featured-projects-dots" aria-label="Featured project slides">
+          {featuredProjects.map((project, index) => (
+            <button
+              className={
+                index === activeFeaturedProjectIndex
+                  ? "landing-featured-projects-dot landing-is-active"
+                  : "landing-featured-projects-dot"
+              }
+              key={project.title}
+              type="button"
+              onClick={() => {
+                setIsFeaturedProjectsPaused(true);
+                scrollToFeaturedProject(index);
+              }}
+              aria-label={`Show ${project.title}`}
+            />
+          ))}
+        </div>
+      </section>
 
       <section className="landing-contact-shell" id="contact">
         <div className="landing-contact-section">
