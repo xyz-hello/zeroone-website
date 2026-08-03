@@ -425,10 +425,16 @@ export default function App() {
                 <span className="landing-hero-eyebrow-separator" aria-hidden="true" />
                 <span>Information Technology Inc.</span>
               </p>
-              <h1 className="landing-hero-title">Welcome</h1>
+              <h1 className="landing-hero-title">
+                <span className="landing-hero-title-line">Build. Transform.</span>
+                <span className="landing-hero-title-line">
+                  Scale with <span className="landing-hero-title-accent">Confidence.</span>
+                </span>
+              </h1>
               <p className="landing-hero-lead">
-                We build modern websites, internal systems, and custom software that
-                fit the way your business actually operates.
+                <span className="landing-hero-lead-line">We build custom software, SaaS platforms, and AI-powered</span>
+                <span className="landing-hero-lead-line">solutions that help organizations streamline operations,</span>
+                <span className="landing-hero-lead-line">delight users, and accelerate growth.</span>
               </p>
             </div>
 
@@ -452,12 +458,13 @@ export default function App() {
           <div className="landing-hero-actions">
             <a
               className="landing-hero-button landing-hero-button-primary"
-              href={companyProfileAboutUrl}
+              href="/#contact"
+              onClick={scrollToContact}
             >
-              Learn More
+              Schedule a Consultation
             </a>
-            <a className="landing-hero-button landing-hero-button-secondary" href="/#contact" onClick={scrollToContact}>
-              Talk to Us
+            <a className="landing-hero-button landing-hero-button-secondary" href="/" onClick={(event) => event.preventDefault()}>
+              View Our Work
             </a>
           </div>
         </section>
