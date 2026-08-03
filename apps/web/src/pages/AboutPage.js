@@ -14,6 +14,8 @@ import { companyProfile } from '../content/companyProfile';
 import { getApiBaseUrl } from '../utils/apiBaseUrl';
 
 const aboutRoute = '/about-us';
+const companyProfileHomeUrl = '/';
+const companyProfileServicesUrl = '/about-us#services';
 const apiBaseUrl = getApiBaseUrl();
 const aboutTitle = 'About ZeroOne IT Inc. | Software Development Team in the Philippines';
 const aboutDescription =
@@ -186,16 +188,23 @@ function App() {
   const solutionProcessRef = useRef(null);
   const solutionCardsInViewRef = useRef(false);
   const pageProfile = mergeAboutContent(companyProfile, aboutContentOverrides);
-  const footerLinks = [
-    { label: 'Services', href: `${aboutRoute}#services` },
-    { label: 'Solutions', href: `${aboutRoute}#services` },
-    { label: 'About', href: `${aboutRoute}#about-us` },
-    { label: 'Contact', href: `${aboutRoute}#${pageProfile.contact.id}` }
+  const footerCapabilities = [
+    { label: 'Custom Software', href: companyProfileServicesUrl },
+    { label: 'AI Automation', href: companyProfileServicesUrl },
+    { label: 'Internal Systems', href: companyProfileServicesUrl },
+    { label: 'Web Platforms', href: companyProfileServicesUrl },
+    { label: 'Mobile Apps', href: companyProfileServicesUrl }
   ];
-  const socialLinks = [
-    { label: 'Facebook', href: 'https://www.facebook.com/zeroone.it.inc' },
-    { label: 'LinkedIn', href: 'https://www.linkedin.com/company/112718341/admin/dashboard/' },
-    { label: 'Instagram', href: 'https://www.instagram.com/zerooneit.inc/' }
+  const footerLinks = [
+    { label: 'Home', href: companyProfileHomeUrl },
+    { label: 'About', href: aboutRoute },
+    { label: 'Services', href: companyProfileServicesUrl },
+    { label: 'Contact', href: `${aboutRoute}#${pageProfile.contact.id}` },
+    { label: 'Facebook', href: 'https://www.facebook.com/zeroone.it.inc' }
+  ];
+  const registrationBadges = [
+    { label: 'SEC Registered', logo: secLogo, alt: 'SEC logo' },
+    { label: 'BIR Registered', logo: birLogo, alt: 'BIR logo' }
   ];
 
   useEffect(() => {
@@ -482,75 +491,71 @@ function App() {
 
         {renderSections()}
 
-        <footer
-          className="section site-footer reveal-section reveal-delay-4"
-          id={pageProfile.contact.id}
-        >
-          <div className="footer-grid">
-            <div className="footer-intro">
-              <p className="footer-kicker">{pageProfile.brand.name}</p>
-              <h2 className="footer-title">Build software that fits the way your business works.</h2>
-              <p className="footer-copy">
-                We create modern websites, internal systems, and custom digital tools for teams
-                that need reliable technology built around real operations.
-              </p>
-              <div className="footer-trustmarks" aria-label="Registration badges">
-                <span className="footer-trustmark">
-                  <img className="footer-trustmark-logo" src={secLogo} alt="SEC logo" />
-                  SEC Registered
-                </span>
-                <span className="footer-trustmark">
-                  <img className="footer-trustmark-logo" src={birLogo} alt="BIR logo" />
-                  BIR Registered
-                </span>
-              </div>
-            </div>
-
-            <div className="footer-panel">
-              <div className="footer-panel-section">
-                <p className="footer-label">Email</p>
-                <a className="footer-value" href={`mailto:${pageProfile.contact.email}`}>
-                  {pageProfile.contact.email}
+        <footer className="landing-site-footer" id={pageProfile.contact.id}>
+          <div className="landing-footer-inner">
+            <div className="landing-footer-main">
+              <div className="landing-footer-brand">
+                <a className="landing-footer-wordmark" href={companyProfileHomeUrl} aria-label="ZeroOne home">
+                  <span className="landing-footer-wordmark-primary">Zero One IT Inc.</span>
                 </a>
-              </div>
-              <div className="footer-panel-section">
-                <p className="footer-label">Phone</p>
-                <a className="footer-value" href="tel:+639190797137">
-                  +63 919 079 7137
-                </a>
-              </div>
-              <div className="footer-panel-section">
-                <p className="footer-label">Based In</p>
-                <p className="footer-value">Philippines</p>
-              </div>
-              <div className="footer-panel-section">
-                <p className="footer-label">What We Build</p>
-                <p className="footer-value">
-                  Custom software, SaaS platforms, websites, and workflow systems
+                <p className="landing-footer-description">
+                  Scaling operations requires software that works for operators. ZeroOne
+                  builds precision IT solutions for modern businesses in the Philippines.
                 </p>
+                <div className="landing-footer-direct">
+                  <p className="landing-footer-label">Direct Contact</p>
+                  <a className="landing-footer-direct-link" href={`mailto:${pageProfile.contact.email}`}>
+                    {pageProfile.contact.email}
+                  </a>
+                  <a className="landing-footer-direct-link" href="tel:+639190797137">
+                    +63 919 079 7137
+                  </a>
+                </div>
+              </div>
+
+              <div className="landing-footer-column">
+                <p className="landing-footer-label">Capabilities</p>
+                <nav className="landing-footer-list" aria-label="Capabilities">
+                  {footerCapabilities.map((item) => (
+                    <a key={item.label} href={item.href}>
+                      {item.label}
+                    </a>
+                  ))}
+                </nav>
+              </div>
+
+              <div className="landing-footer-column">
+                <p className="landing-footer-label">Navigation</p>
+                <nav className="landing-footer-list" aria-label="Footer">
+                  {footerLinks.map((item) => (
+                    <a
+                      key={item.label}
+                      href={item.href}
+                      target={item.href.startsWith('http') ? '_blank' : undefined}
+                      rel={item.href.startsWith('http') ? 'noreferrer' : undefined}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </nav>
               </div>
             </div>
-          </div>
 
-          <div className="footer-bottom">
-            <nav className="footer-nav" aria-label="Footer">
-              {footerLinks.map((item) => (
-                <a key={item.label} href={item.href}>
-                  {item.label}
-                </a>
+            <div className="landing-footer-badges" aria-label="Registration badges">
+              {registrationBadges.map((badge) => (
+                <span className="landing-footer-badge" key={badge.label}>
+                  <img className="landing-footer-badge-logo" src={badge.logo} alt={badge.alt} />
+                  <span>{badge.label}</span>
+                </span>
               ))}
-            </nav>
-            <nav className="footer-social-nav" aria-label="Social links">
-              {socialLinks.map((item) => (
-                <a key={item.label} href={item.href} target="_blank" rel="noreferrer">
-                  {item.label}
-                </a>
-              ))}
-            </nav>
-            <p className="footer-copyright">© 2026 ZeroOne IT Inc. All rights reserved.</p>
-            <a className="footer-cta" href={`mailto:${pageProfile.contact.email}`}>
-              Start a Project
-            </a>
+            </div>
+
+            <div className="landing-footer-bottom">
+              <p className="landing-footer-copyright">© 2026 ZEROONE IT INC. ALL RIGHTS RESERVED.</p>
+              <a className="landing-footer-cta" href={`mailto:${pageProfile.contact.email}`}>
+                Start a Project
+              </a>
+            </div>
           </div>
         </footer>
       </main>
