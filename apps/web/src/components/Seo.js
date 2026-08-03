@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 const defaultSiteUrl = process.env.REACT_APP_SITE_URL || 'https://zerooneitinc.com';
 const publicUrl = process.env.PUBLIC_URL || '';
-const defaultImagePath = `${publicUrl}/android-chrome-512x512.png`;
+const defaultImagePath = `${publicUrl}/og-image.png`;
 
 function normalizeSiteUrl(value) {
   return value.replace(/\/+$/, '');
@@ -102,7 +102,14 @@ function Seo({
     setMeta('meta[property="og:description"]', { property: 'og:description', content: description });
     setMeta('meta[property="og:url"]', { property: 'og:url', content: canonicalUrl });
     setMeta('meta[property="og:image"]', { property: 'og:image', content: imageUrl });
-    setMeta('meta[property="og:image:alt"]', { property: 'og:image:alt', content: 'ZeroOne IT Inc. logo' });
+    setMeta('meta[property="og:image:secure_url"]', { property: 'og:image:secure_url', content: imageUrl });
+    setMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/png' });
+    setMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' });
+    setMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' });
+    setMeta('meta[property="og:image:alt"]', {
+      property: 'og:image:alt',
+      content: 'ZeroOne IT Inc. software solutions hero preview'
+    });
     setMeta('meta[property="og:locale"]', { property: 'og:locale', content: 'en_PH' });
 
     setMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
