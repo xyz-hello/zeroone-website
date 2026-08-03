@@ -9,7 +9,7 @@ test('renders landing hero heading by default', () => {
   render(<App />);
 
   const heading = screen.getByRole('heading', {
-    name: /welcome/i
+    name: /build\. transform\. scale with confidence\./i
   });
 
   expect(heading).toBeInTheDocument();
