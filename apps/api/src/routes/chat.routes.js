@@ -105,10 +105,25 @@ function tokenize(value) {
 }
 
 function scoreKnowledge(messageTokens, item) {
-  const sourceTokens = tokenize(`${item.question || ''} ${item.keywords || ''} ${item.answer || ''}`);
-  const source = new Set(sourceTokens);
+  const questionTokens = new Set(tokenize(item.question));
+  const keywordTokens = new Set(tokenize(item.keywords));
+  const answerTokens = new Set(tokenize(item.answer));
 
-  const score = messageTokens.reduce((total, token) => total + (source.has(token) ? 1 : 0), 0);
+  const score = messageTokens.reduce((total, token) => {
+    if (questionTokens.has(token)) {
+      return total + 4;
+    }
+
+    if (keywordTokens.has(token)) {
+      return total + 2;
+    }
+
+    if (answerTokens.has(token)) {
+      return total + 1;
+    }
+
+    return total;
+  }, 0);
 
   return score;
 }
