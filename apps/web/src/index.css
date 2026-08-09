@@ -1399,7 +1399,7 @@
 
     .landing-hero-shell {
       min-height: auto;
-      padding-top: 30px;
+      padding-top: clamp(4rem, 16vw, 5rem);
       align-items: flex-start;
     }
 
@@ -1414,6 +1414,7 @@
 
     .landing-hero-brand-panel {
       min-height: auto;
+      order: -1;
       padding: 12px;
     }
 
@@ -1709,6 +1710,13 @@
     display: flex;
     align-items: center;
     font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  }
+
+  .brand-tab-icon {
+    display: none;
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
   }
 
   .brand-copy {
@@ -3580,6 +3588,13 @@
       flex-wrap: wrap;
     }
 
+    .landing-topbar {
+      flex-wrap: nowrap;
+      gap: clamp(0.5rem, 2.6vw, 0.8rem);
+      padding-left: clamp(0.6rem, 3vw, 1rem);
+      padding-right: clamp(0.6rem, 3vw, 1rem);
+    }
+
     .nav {
       order: 3;
       width: 100%;
@@ -3587,8 +3602,31 @@
       gap: 0.75rem 1rem;
     }
 
+    .landing-topbar .nav {
+      order: initial;
+      width: auto;
+      flex: 1 1 auto;
+      flex-wrap: nowrap;
+      gap: clamp(0.55rem, 2.8vw, 0.9rem);
+      min-width: 0;
+    }
+
+    .landing-topbar .nav-link {
+      flex: 0 0 auto;
+      font-size: clamp(0.78rem, 3.2vw, 0.95rem);
+      white-space: nowrap;
+    }
+
     .brand-copy strong {
       font-size: 0.98rem;
+    }
+
+    .landing-topbar .brand-tab-icon {
+      display: block;
+    }
+
+    .landing-topbar .brand-copy {
+      display: none;
     }
 
     .hero {

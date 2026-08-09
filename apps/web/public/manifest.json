@@ -4,9 +4,10 @@
   "description": "Custom software, web platforms, mobile apps, internal systems, and AI automation for growing businesses.",
   "icons": [
     {
-      "src": "/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
+      "src": "/zeroone-tab-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
       "src": "/android-chrome-192x192.png",

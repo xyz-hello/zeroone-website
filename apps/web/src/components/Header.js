@@ -2,6 +2,7 @@ function Header({ brand, className = '', navigation, contactHref }) {
   return (
     <header className={`topbar ${className}`}>
       <a className="brand" href="/" aria-label="ZeroOne home">
+        <img className="brand-tab-icon" src="/zeroone-tab-icon.svg" alt="" aria-hidden="true" />
         <div className="brand-copy">
           <strong>{brand.name}</strong>
         </div>
